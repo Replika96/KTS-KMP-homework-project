@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.Color
 
 // основные цвета RedCat
 val GingerCat = Color(0xFFFF8A5C)    // основной
-val KittenPink = Color(0xFFFFB7B7)
+//val KittenPink = Color(0xFFFFB7B7)
 val CreamPaws = Color(0xFFFFE9D6)
 val SoftWhiskers = Color(0xFFF5E6D3)
 val CatNose = Color(0xFFFF9E9E)
@@ -51,7 +51,7 @@ val LightThemeColors = AppColors(
     scrim = Color.Black.copy(alpha = 0.3f)
 )
 
-val DarkThemeColors = AppColors(
+/*val DarkThemeColors = AppColors(
     primary = CatNose,
     onPrimary = CozyBrown,
     primaryContainer = GingerCat.copy(alpha = 0.2f),
@@ -89,7 +89,7 @@ val DarkThemeColors = AppColors(
 
     shadow = Color.Black.copy(alpha = 0.4f),
     scrim = Color.Black.copy(alpha = 0.6f)
-)
+)*/
 
 data class AppColors(
     val primary: Color,

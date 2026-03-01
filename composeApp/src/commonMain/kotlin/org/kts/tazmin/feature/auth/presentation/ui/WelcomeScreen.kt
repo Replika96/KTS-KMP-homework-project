@@ -29,7 +29,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import ktskotlinproject.composeapp.generated.resources.Res
-import ktskotlinproject.composeapp.generated.resources.cat_placeholder
 import ktskotlinproject.composeapp.generated.resources.login_title
 import ktskotlinproject.composeapp.generated.resources.redcat_welcome
 import ktskotlinproject.composeapp.generated.resources.welcome_title

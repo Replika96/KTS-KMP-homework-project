@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.kts.tazmin.feature.feed.domain.entity.Post
 import org.kts.tazmin.feature.feed.domain.usacase.GetPostsUseCase
 import org.kts.tazmin.feature.feed.presentation.state.FeedUiState
 
