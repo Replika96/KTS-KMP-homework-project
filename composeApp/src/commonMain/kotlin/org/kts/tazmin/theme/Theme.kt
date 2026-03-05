@@ -1,6 +1,5 @@
 package org.kts.tazmin.theme
 
-
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.material3.MaterialTheme
@@ -8,13 +7,14 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.Typography
 
-
 @Composable
 fun CatTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colors = if (darkTheme) DarkThemeColors else LightThemeColors
+    // пока еще думаю над темной цветовой схемой
+    val colors = LightThemeColors
+    //if (darkTheme) DarkThemeColors else LightThemeColors
 
     val colorScheme = if (darkTheme) {
         darkColorScheme(

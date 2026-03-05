@@ -1,91 +1,95 @@
 package org.kts.tazmin.theme
 
-
 import androidx.compose.ui.graphics.Color
 
-
-val WarmCream = Color(0xFFFFF6E5)
-val SoftMocha = Color(0xFF6D5C4D)
-val WarmBrown = Color(0xFF4E4037)
-val Peach = Color(0xFFFFB7A5)
-val SoftSand = Color(0xFFE8DCC8)
+// основные цвета RedCat
+val GingerCat = Color(0xFFFF8A5C)    // основной
+//val KittenPink = Color(0xFFFFB7B7)
+val CreamPaws = Color(0xFFFFE9D6)
+val SoftWhiskers = Color(0xFFF5E6D3)
+val CatNose = Color(0xFFFF9E9E)
+val CozyBrown = Color(0xFF8B5E3C)
+val NightPaws = Color(0xFFC6623B)
 
 val LightThemeColors = AppColors(
-    primary = SoftMocha,
-    onPrimary = WarmCream,
-    primaryContainer = SoftSand,
-    onPrimaryContainer = WarmBrown,
+    primary = GingerCat,
+    onPrimary = Color.White,
+    primaryContainer = CreamPaws,
+    onPrimaryContainer = CozyBrown,
 
-    secondary = Peach,
-    onSecondary = WarmBrown,
-    secondaryContainer = Peach.copy(alpha = 0.25f),
-    onSecondaryContainer = WarmBrown,
+    secondary = CatNose,
+    onSecondary = CozyBrown,
+    secondaryContainer = CatNose.copy(alpha = 0.2f),
+    onSecondaryContainer = CozyBrown,
 
-    tertiary = WarmBrown,
-    onTertiary = WarmCream,
+    tertiary = CozyBrown,
+    onTertiary = CreamPaws,
+    tertiaryContainer = CozyBrown.copy(alpha = 0.1f),
+    onTertiaryContainer = CozyBrown,
 
-    background = WarmCream,
-    onBackground = WarmBrown,
+    background = CreamPaws,
+    onBackground = CozyBrown,
 
     surface = Color.White,
-    onSurface = WarmBrown,
-    surfaceVariant = SoftSand,
-    onSurfaceVariant = SoftMocha,
+    onSurface = CozyBrown,
+    surfaceVariant = SoftWhiskers,
+    onSurfaceVariant = CozyBrown.copy(alpha = 0.8f),
 
     error = Color(0xFFE57373),
     onError = Color.White,
     errorContainer = Color(0xFFFFCDD2),
     onErrorContainer = Color(0xFFB71C1C),
 
-    outline = SoftMocha.copy(alpha = 0.4f),
-    outlineVariant = SoftSand,
+    outline = GingerCat.copy(alpha = 0.3f),
+    outlineVariant = SoftWhiskers,
 
-    inverseSurface = WarmBrown,
-    inverseOnSurface = WarmCream,
-    inversePrimary = Peach,
+    inverseSurface = CozyBrown,
+    inverseOnSurface = CreamPaws,
+    inversePrimary = CatNose,
 
-    shadow = Color.Black.copy(alpha = 0.15f),
+    shadow = Color.Black.copy(alpha = 0.1f),
     scrim = Color.Black.copy(alpha = 0.3f)
 )
 
-val DarkThemeColors = AppColors(
-    primary = Peach,
-    onPrimary = WarmBrown,
-    primaryContainer = SoftMocha,
-    onPrimaryContainer = WarmCream,
+/*val DarkThemeColors = AppColors(
+    primary = CatNose,
+    onPrimary = CozyBrown,
+    primaryContainer = GingerCat.copy(alpha = 0.2f),
+    onPrimaryContainer = CreamPaws,
 
-    secondary = SoftSand,
-    onSecondary = WarmBrown,
-    secondaryContainer = SoftSand.copy(alpha = 0.15f),
-    onSecondaryContainer = SoftSand,
+    secondary = GingerCat,
+    onSecondary = CozyBrown,
+    secondaryContainer = GingerCat.copy(alpha = 0.15f),
+    onSecondaryContainer = GingerCat,
 
-    tertiary = Peach,
-    onTertiary = WarmBrown,
+    tertiary = CreamPaws,
+    onTertiary = CozyBrown,
+    tertiaryContainer = CreamPaws.copy(alpha = 0.15f),
+    onTertiaryContainer = CreamPaws,
 
-    background = WarmBrown,
-    onBackground = WarmCream,
+    background = NightPaws,
+    onBackground = CreamPaws,
 
-    surface = SoftMocha,
-    onSurface = WarmCream,
-    surfaceVariant = SoftMocha.copy(alpha = 0.8f),
-    onSurfaceVariant = WarmCream.copy(alpha = 0.8f),
+    surface = CozyBrown,
+    onSurface = CreamPaws,
+    surfaceVariant = CozyBrown.copy(alpha = 0.6f),
+    onSurfaceVariant = CreamPaws.copy(alpha = 0.8f),
 
     error = Color(0xFFEF9A9A),
-    onError = WarmBrown,
+    onError = NightPaws,
     errorContainer = Color(0xFF5F2A2A),
     onErrorContainer = Color(0xFFFFCDD2),
 
-    outline = SoftSand.copy(alpha = 0.4f),
-    outlineVariant = SoftMocha,
+    outline = CatNose.copy(alpha = 0.3f),
+    outlineVariant = CozyBrown.copy(alpha = 0.5f),
 
-    inverseSurface = WarmCream,
-    inverseOnSurface = WarmBrown,
-    inversePrimary = SoftMocha,
+    inverseSurface = CreamPaws,
+    inverseOnSurface = CozyBrown,
+    inversePrimary = GingerCat,
 
     shadow = Color.Black.copy(alpha = 0.4f),
-    scrim = Color.Black.copy(alpha = 0.5f)
-)
-
+    scrim = Color.Black.copy(alpha = 0.6f)
+)*/
 
 data class AppColors(
     val primary: Color,
