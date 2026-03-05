@@ -14,9 +14,9 @@ import org.kts.tazmin.feature.auth.di.authModule
 import org.kts.tazmin.navigation.Screen
 import org.kts.tazmin.feature.auth.presentation.ui.LoginScreen
 import org.kts.tazmin.feature.auth.presentation.ui.WelcomeScreen
-import org.kts.tazmin.feature.feed.di.feedModule
-import org.kts.tazmin.feature.feed.presentation.ui.FeedScreen
+import org.kts.tazmin.feature.courses.di.coursesModule
 import org.kts.tazmin.theme.CatTheme
+import org.kts.tazmin.feature.courses.presentation.ui.CoursesScreen
 
 @Composable
 @Preview
@@ -25,7 +25,7 @@ fun App() {
         KoinApplication(
             application = {
                 modules(authModule,
-                    feedModule)
+                    coursesModule)
             }
         ) {
             Box(
@@ -53,7 +53,7 @@ fun App() {
                     composable(Screen.Login.route) {
                         LoginScreen(
                             onNavigateToMain = {
-                                navController.navigate(Screen.Feed.route){
+                                navController.navigate(Screen.Courses.route){
                                     // чтоб не возвращаться назад
                                     popUpTo(Screen.Login.route){
                                         inclusive = true
@@ -62,8 +62,8 @@ fun App() {
                             }
                         )
                     }
-                    composable(Screen.Feed.route) {
-                        FeedScreen()
+                    composable(Screen.Courses.route) {
+                        CoursesScreen()
                     }
                 }
             }

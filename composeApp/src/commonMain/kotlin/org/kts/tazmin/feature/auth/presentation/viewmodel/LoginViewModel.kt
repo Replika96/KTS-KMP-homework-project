@@ -55,7 +55,7 @@ class LoginViewModel(private val loginUseCase: LoginUseCase): ViewModel() {
         }
     }
 
-    fun onLoginCLick(){
+    fun onLoginClick(){
         val current = _state.value
 
 

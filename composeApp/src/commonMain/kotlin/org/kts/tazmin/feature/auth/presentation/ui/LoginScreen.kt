@@ -37,9 +37,11 @@ import ktskotlinproject.composeapp.generated.resources.Res
 import ktskotlinproject.composeapp.generated.resources.login_button
 import ktskotlinproject.composeapp.generated.resources.login_label
 import ktskotlinproject.composeapp.generated.resources.login_placeholder
+import ktskotlinproject.composeapp.generated.resources.login_requirement
 import ktskotlinproject.composeapp.generated.resources.login_title
 import ktskotlinproject.composeapp.generated.resources.password_label
 import ktskotlinproject.composeapp.generated.resources.password_placeholder
+import ktskotlinproject.composeapp.generated.resources.password_requirement
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.kts.tazmin.feature.auth.presentation.state.LoginError
@@ -54,7 +56,7 @@ fun LoginScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(Unit){
+    LaunchedEffect(viewModel){
         viewModel.events.collect{ event ->
             when(event){
                 LoginUiEvent.LoginSuccessEvent -> {
@@ -89,7 +91,7 @@ fun LoginScreen(
             isError = state.error is LoginError.InvalidUserName,
             supportingText = {
                 if (state.error is LoginError.InvalidUserName) {
-                    Text("Логин должен быть минимум 3 символа")
+                    Text(stringResource(Res.string.login_requirement))
                 }
             },
             keyboardOptions = KeyboardOptions(
@@ -116,7 +118,7 @@ fun LoginScreen(
             isError = state.error is LoginError.InvalidPassword,
             supportingText = {
                 if (state.error is LoginError.InvalidPassword) {
-                    Text("Пароль должен быть минимум 6 символов")
+                    Text(stringResource(Res.string.password_requirement))
                 }
             },
             trailingIcon = {
@@ -135,7 +137,7 @@ fun LoginScreen(
         Spacer(modifier = Modifier.height(32.dp))
 
         Button(
-            onClick = viewModel::onLoginCLick,
+            onClick = viewModel::onLoginClick,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
