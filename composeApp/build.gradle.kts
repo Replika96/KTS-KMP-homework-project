@@ -43,6 +43,12 @@ kotlin {
             implementation(libs.androidx.navigation.compose)
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
+
+            implementation(libs.koin.core)
+            implementation(libs.koin.compose)
+
+            implementation(libs.material3.v190)
+            implementation(libs.material.icons.extended)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -80,4 +86,3 @@ android {
 dependencies {
     debugImplementation(libs.compose.uiTooling)
 }
-

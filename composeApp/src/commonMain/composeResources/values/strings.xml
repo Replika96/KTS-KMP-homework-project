@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_title">Redcat</string>
+    <string name="welcome_title">Добро пожаловать!</string>
+
+    <string name="login_button">Войти</string>
+    <string name="login_title">Вход</string>
+    <string name="login_label">Логин</string>
+    <string name="login_placeholder">Введите логин</string>
+    <string name="login_requirement">Логин должен быть минимум 3 символа</string>
+
+    <string name="password_label">Пароль</string>
+    <string name="password_placeholder">Введите пароль</string>
+    <string name="password_requirement">Пароль должен быть минимум 6 символов</string>
+
+    <string name="main_screen">Главная</string>
+    <string name="continue_coures">Продолжить учиться</string>
+    <string name="no_active_courses">Нет активных курсов</string>
+    <string name="my_active_courses">Мои курсы</string>
+    <string name="my_reviews">Мои отзывы</string>
+    <string name="wishlist">Список желаний</string>
+</resources>
