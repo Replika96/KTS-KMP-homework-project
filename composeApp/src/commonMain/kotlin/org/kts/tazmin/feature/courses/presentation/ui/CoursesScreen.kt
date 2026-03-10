@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import ktskotlinproject.composeapp.generated.resources.Res
+import ktskotlinproject.composeapp.generated.resources.all_button
 import ktskotlinproject.composeapp.generated.resources.all_courses
 import ktskotlinproject.composeapp.generated.resources.continue_coures
 import ktskotlinproject.composeapp.generated.resources.free
@@ -226,9 +227,8 @@ fun CoursesScreen(
                     }
                     if (allCourses.isNotEmpty()) {
                         item {
-                            SectionHeader(
+                            SectionHeaderAll(
                                 title = stringResource(Res.string.all_courses),
-                                count = allCourses.size,
                                 onViewAllClick = onAllCoursesClick,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
@@ -526,7 +526,7 @@ fun SectionHeader(
                 contentColor = MaterialTheme.colorScheme.primary
             )
         ) {
-            Text("Все")
+            Text(stringResource(Res.string.all_button))
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
@@ -535,7 +535,45 @@ fun SectionHeader(
         }
     }
 }
+@Composable
+fun SectionHeaderAll(
+    title: String,
+    onViewAllClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
 
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+        // View all button
+        TextButton(
+            onClick = onViewAllClick,
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Text(stringResource(Res.string.all_button))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
 @Composable
 fun MyCourseItem(
     course: Course,

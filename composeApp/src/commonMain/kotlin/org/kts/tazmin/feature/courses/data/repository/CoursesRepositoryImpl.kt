@@ -1,9 +1,6 @@
 package org.kts.tazmin.feature.courses.data.repository
 
 import io.github.aakira.napier.Napier
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import org.kts.tazmin.feature.courses.data.mapper.CourseMapper
 import org.kts.tazmin.feature.courses.data.model.CoursesPage
 import org.kts.tazmin.feature.courses.data.model.ReviewSummaryDto

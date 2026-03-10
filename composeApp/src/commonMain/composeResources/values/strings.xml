@@ -18,6 +18,7 @@
     <string name="no_active_courses">Нет активных курсов</string>
     <string name="my_active_courses">Мои курсы</string>
     <string name="all_courses">Все курсы</string>
+    <string name="all_button">Все</string>
     <string name="search_courses">Поиск курсов</string>
     <string name="my_reviews">Мои отзывы</string>
     <string name="wishlist">Список желаний</string>
