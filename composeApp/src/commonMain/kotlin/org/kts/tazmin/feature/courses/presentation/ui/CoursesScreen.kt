@@ -13,11 +13,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -26,17 +28,18 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +47,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -51,22 +55,24 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import ktskotlinproject.composeapp.generated.resources.Res
+import ktskotlinproject.composeapp.generated.resources.all_button
+import ktskotlinproject.composeapp.generated.resources.all_courses
 import ktskotlinproject.composeapp.generated.resources.continue_coures
+import ktskotlinproject.composeapp.generated.resources.free
+import ktskotlinproject.composeapp.generated.resources.load_error
+import ktskotlinproject.composeapp.generated.resources.loading
 import ktskotlinproject.composeapp.generated.resources.main_screen
 import ktskotlinproject.composeapp.generated.resources.my_active_courses
 import ktskotlinproject.composeapp.generated.resources.my_reviews
 import ktskotlinproject.composeapp.generated.resources.no_active_courses
+import ktskotlinproject.composeapp.generated.resources.retry
 import ktskotlinproject.composeapp.generated.resources.wishlist
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.kts.tazmin.feature.courses.domain.entity.Course
+import org.kts.tazmin.feature.courses.presentation.state.CoursesUiEvent
 import org.kts.tazmin.feature.courses.presentation.viewmodel.CoursesViewModel
-import org.kts.tazmin.theme.CatNose
 import org.kts.tazmin.theme.CatTheme
-import org.kts.tazmin.theme.CozyBrown
-import org.kts.tazmin.theme.CreamPaws
-import org.kts.tazmin.theme.GingerCat
-import org.kts.tazmin.theme.SoftWhiskers
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,11 +84,10 @@ fun CoursesScreen(
     onReviewsClick: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val listState = rememberLazyListState()
 
-    LaunchedEffect(viewModel){
-        viewModel.loadCourses()
-    }
-
+    val mainScreenCourses = state.courses.take(2)  // только 2 курса
+    val allCourses = state.courses
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -90,78 +95,166 @@ fun CoursesScreen(
                 title = {
                     Text(
                         text = stringResource(Res.string.main_screen),
-                        color = CozyBrown,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp
+                        fontSize = 20.sp,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 },
                 actions = {
-                    IconButton(onClick = { /* уведомления */ }) {
+                    IconButton(onClick = {}) {
                         Icon(
                             imageVector = Icons.Default.NotificationsNone,
                             contentDescription = "Notifications",
-                            tint = CozyBrown
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    IconButton(onClick = { /* настройки */ }) {
+                    IconButton(onClick = {}) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Settings",
-                            tint = CozyBrown
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = CreamPaws,
-                    scrolledContainerColor = CreamPaws
+                    containerColor = MaterialTheme.colorScheme.surface
                 )
             )
         },
-        containerColor = CreamPaws
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-        ) {
-            // карточка "Продолжить учиться"
-            item {
-                ContinueLearningCard(
-                    course = state.courses.firstOrNull(),
-                    modifier = Modifier.padding(16.dp)
-                )
+
+        when {
+            // Первичная загрузка
+            state.isLoading && state.courses.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(Res.string.loading),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
-            // раздел "Мои курсы"
-            item {
-                MyCoursesHeader(
-                    count = state.courses.size,
-                    onViewAllClick = onAllCoursesClick,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
+            // Ошибка
+            !state.coursesError.isNullOrBlank() && state.courses.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Error,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = stringResource(Res.string.load_error),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = state.coursesError!!,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Button(
+                            onClick = { viewModel.handleEvent(CoursesUiEvent.LoadCourses) },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            )
+                        ) {
+                            Text(stringResource(Res.string.retry))
+                        }
+                    }
+                }
             }
 
-            // список моих курсов
-            items(
-                items = state.courses,
-                key = { "my_course_${it.id}" }
-            ) { course ->
-                MyCourseItem(
-                    course = course,
-                    onContinueClick = { onCourseClick(course.id) },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-            }
+            else -> {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                ) {
+                    // Continue learning card
+                    item {
+                        ContinueLearningCard(
+                            course = mainScreenCourses.firstOrNull(),
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
 
-            // "Мои отзывы" и "Список желаний"
-            item {
-                ActionCards(
-                    onReviewsClick = onReviewsClick,
-                    onWishlistClick = onWishlistClick,
-                    modifier = Modifier.padding(16.dp)
-                )
-            }
+                    // Header
+                    item {
+                        SectionHeader(
+                            title = stringResource(Res.string.my_active_courses),
+                            count = state.courses.size,
+                            onViewAllClick = onAllCoursesClick,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                    }
 
+                    itemsIndexed(
+                        items = mainScreenCourses,
+                        key = { _, course -> course.id }
+                    ) { _, course ->
+                        MyCourseItem(
+                            course = course,
+                            onContinueClick = { onCourseClick(course.id) },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+                    if (allCourses.isNotEmpty()) {
+                        item {
+                            SectionHeaderAll(
+                                title = stringResource(Res.string.all_courses),
+                                onViewAllClick = onAllCoursesClick,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+
+                        itemsIndexed(
+                            items = allCourses,
+                            key = { _, course -> "all_${course.id}" }
+                        ) { _, course ->
+                            AllCourseItem(
+                                course = course,
+                                onClick = { onCourseClick(course.id) },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                    // Bottom cards
+                    item {
+                        ActionCards(
+                            onReviewsClick = onReviewsClick,
+                            onWishlistClick = onWishlistClick,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -175,7 +268,7 @@ fun ContinueLearningCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -185,12 +278,12 @@ fun ContinueLearningCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // картинка курса
+            // Course image
             Box(
                 modifier = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(SoftWhiskers)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 if (course?.coverUrl != null) {
                     AsyncImage(
@@ -201,9 +294,7 @@ fun ContinueLearningCard(
                     )
                 } else {
                     Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(GingerCat.copy(alpha = 0.3f)),
+                        modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -216,14 +307,14 @@ fun ContinueLearningCard(
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            // контент справа
+            // Content
             Column(
                 modifier = Modifier.weight(1f)
             ) {
                 Button(
-                    onClick = { /* продолжить */ },
+                    onClick = { /* continue */ },
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = GingerCat,
+                        containerColor = MaterialTheme.colorScheme.primary,
                         contentColor = Color.White
                     ),
                     shape = RoundedCornerShape(20.dp),
@@ -240,19 +331,19 @@ fun ContinueLearningCard(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // название курса
+                // Course title
                 Text(
                     text = course?.title ?: stringResource(Res.string.no_active_courses),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = CozyBrown,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // прогресс
+                // Progress
                 if (course != null) {
                     Column {
                         LinearProgressIndicator(
@@ -261,8 +352,8 @@ fun ContinueLearningCard(
                                 .fillMaxWidth()
                                 .height(6.dp)
                                 .clip(RoundedCornerShape(3.dp)),
-                            color = GingerCat,
-                            trackColor = SoftWhiskers
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
 
                         Spacer(modifier = Modifier.height(4.dp))
@@ -270,7 +361,7 @@ fun ContinueLearningCard(
                         Text(
                             text = "45% • 3/7 уроков",
                             fontSize = 11.sp,
-                            color = CozyBrown.copy(alpha = 0.7f)
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -280,7 +371,116 @@ fun ContinueLearningCard(
 }
 
 @Composable
-fun MyCoursesHeader(
+fun AllCourseItem(
+    course: Course,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Image
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                if (course.coverUrl != null) {
+                    AsyncImage(
+                        model = course.coverUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "📚",
+                            fontSize = 20.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Title and info
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = course.title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "⭐ ${course.rating}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "👤 ${course.author}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Price
+                Text(
+                    text = if (course.isPaid && course.price != null)
+                        course.price
+                    else
+                        stringResource(Res.string.free),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            // Arrow icon
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(
+    title: String,
     count: Int,
     onViewAllClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -294,20 +494,20 @@ fun MyCoursesHeader(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = stringResource(Res.string.my_active_courses),
+                text = title,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = CozyBrown
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // количество курсов
+            // Count badge
             Box(
                 modifier = Modifier
                     .size(24.dp)
                     .clip(CircleShape)
-                    .background(GingerCat),
+                    .background(MaterialTheme.colorScheme.primary),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -319,14 +519,14 @@ fun MyCoursesHeader(
             }
         }
 
-        // все курсы
+        // View all button
         TextButton(
             onClick = onViewAllClick,
             colors = ButtonDefaults.textButtonColors(
-                contentColor = GingerCat
+                contentColor = MaterialTheme.colorScheme.primary
             )
         ) {
-            Text("Все")
+            Text(stringResource(Res.string.all_button))
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
@@ -335,7 +535,45 @@ fun MyCoursesHeader(
         }
     }
 }
+@Composable
+fun SectionHeaderAll(
+    title: String,
+    onViewAllClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
 
+            Spacer(modifier = Modifier.width(8.dp))
+        }
+        // View all button
+        TextButton(
+            onClick = onViewAllClick,
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Text(stringResource(Res.string.all_button))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
 @Composable
 fun MyCourseItem(
     course: Course,
@@ -346,7 +584,7 @@ fun MyCourseItem(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -355,16 +593,16 @@ fun MyCourseItem(
                 .fillMaxWidth()
                 .padding(12.dp)
         ) {
-            // верхняя часть: картинка + название и прогресс
+            // Top row: image + title and progress
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // картинка
+                // Image
                 Box(
                     modifier = Modifier
                         .size(60.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(SoftWhiskers)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     if (course.coverUrl != null) {
                         AsyncImage(
@@ -375,9 +613,7 @@ fun MyCourseItem(
                         )
                     } else {
                         Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(GingerCat.copy(alpha = 0.3f)),
+                            modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -390,7 +626,7 @@ fun MyCourseItem(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                // название и прогресс
+                // Title and progress
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {
@@ -398,29 +634,29 @@ fun MyCourseItem(
                         text = course.title,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = CozyBrown,
+                        color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // прогресс
+                    // Progress
                     Column {
                         LinearProgressIndicator(
-                            progress = { 0.3f }, // мок
+                            progress = { 0.3f }, // mock
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(4.dp)
                                 .clip(RoundedCornerShape(2.dp)),
-                            color = GingerCat,
-                            trackColor = SoftWhiskers
+                            color = MaterialTheme.colorScheme.primary,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
 
                         Text(
                             text = "30%",
                             fontSize = 11.sp,
-                            color = CozyBrown.copy(alpha = 0.7f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.align(Alignment.End)
                         )
                     }
@@ -429,12 +665,12 @@ fun MyCourseItem(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // кнопка "Продолжить учиться"
+            // Continue button
             Button(
                 onClick = onContinueClick,
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = GingerCat.copy(alpha = 0.1f),
-                    contentColor = GingerCat
+                    containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                    contentColor = MaterialTheme.colorScheme.primary
                 ),
                 shape = RoundedCornerShape(8.dp),
                 modifier = Modifier
@@ -461,21 +697,21 @@ fun ActionCards(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // карточка "Мои отзывы"
+        // My reviews card
         ActionCard(
             title = stringResource(Res.string.my_reviews),
             icon = Icons.Outlined.RateReview,
-            iconColor = CatNose,
+            iconColor = MaterialTheme.colorScheme.tertiary,
             onClick = onReviewsClick,
             modifier = Modifier.weight(1f)
         )
 
-        // карточка "Список желаний"
+        // Wishlist card
         ActionCard(
             title = stringResource(Res.string.wishlist),
             icon = Icons.Outlined.FavoriteBorder,
-            iconColor = GingerCat,
-            count = 3, // пример количества
+            iconColor = MaterialTheme.colorScheme.primary,
+            count = 3, // example count
             onClick = onWishlistClick,
             modifier = Modifier.weight(1f)
         )
@@ -496,7 +732,7 @@ fun ActionCard(
         modifier = modifier.height(80.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.White
+            containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -523,7 +759,7 @@ fun ActionCard(
                     text = title,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = CozyBrown
+                    color = MaterialTheme.colorScheme.onSurface
                 )
 
                 if (count != null) {
@@ -531,7 +767,7 @@ fun ActionCard(
                         modifier = Modifier
                             .size(20.dp)
                             .clip(CircleShape)
-                            .background(GingerCat),
+                            .background(MaterialTheme.colorScheme.primary),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -550,27 +786,7 @@ fun ActionCard(
 @Preview(showBackground = true)
 @Composable
 fun CoursesScreenPreview() {
-    CatTheme{
-        val mockCourses = listOf(
-            Course(
-                id = 1,
-                title = "Android Development with Kotlin",
-                description = "Полный курс по разработке Android приложений",
-                author = "JetBrains Academy",
-                coverUrl = "https://i.postimg.cc/cC7y65Zx/bingchilin.jpg",
-                rating = 4.8,
-                studentsCount = 12000
-            ),
-            Course(
-                id = 2,
-                title = "Kotlin Multiplatform",
-                description = "Изучаем KMP и создаем кроссплатформенные приложения",
-                author = "JetBrains",
-                coverUrl = "https://i.postimg.cc/1XV1P57q/anon.jpg",
-                rating = 4.7,
-                studentsCount = 8500
-            )
-        )
+    CatTheme {
         // пока думаю как сделать
         CoursesScreen()
     }
