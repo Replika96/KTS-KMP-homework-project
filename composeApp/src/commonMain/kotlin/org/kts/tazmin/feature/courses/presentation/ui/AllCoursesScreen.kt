@@ -38,6 +38,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import ktskotlinproject.composeapp.generated.resources.Res
+import ktskotlinproject.composeapp.generated.resources.all_courses
+import ktskotlinproject.composeapp.generated.resources.search_courses
+import ktskotlinproject.composeapp.generated.resources.students
+import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.kts.tazmin.feature.courses.domain.entity.Course
 import org.kts.tazmin.feature.courses.presentation.state.CoursesUiEvent
@@ -57,7 +62,7 @@ fun AllCoursesScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Все курсы")
+                    Text(stringResource(Res.string.all_courses))
                 }
             )
         }
@@ -80,7 +85,7 @@ fun AllCoursesScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                placeholder = { Text("Поиск курсов") },
+                placeholder = { Text(stringResource(Res.string.search_courses)) },
                 leadingIcon = {
                     Icon(Icons.Default.Search, null)
                 },
@@ -221,7 +226,7 @@ fun CourseCatalogItem(
                     Spacer(Modifier.width(8.dp))
 
                     Text(
-                        text = "${course.studentsCount} студентов",
+                        text = "${course.studentsCount} ${stringResource(Res.string.students)}",
                         style = MaterialTheme.typography.bodySmall
                     )
                 }

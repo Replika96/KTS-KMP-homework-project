@@ -7,7 +7,6 @@ import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import org.kts.tazmin.feature.courses.data.model.CoursesResponse
 
-
 class CoursesApi(
     private val client: HttpClient,
     private val baseUrl: String = "https://stepik.org"

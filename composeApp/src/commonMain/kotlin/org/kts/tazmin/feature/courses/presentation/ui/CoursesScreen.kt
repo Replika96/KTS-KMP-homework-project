@@ -40,9 +40,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -56,14 +54,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
 import ktskotlinproject.composeapp.generated.resources.Res
+import ktskotlinproject.composeapp.generated.resources.all_courses
 import ktskotlinproject.composeapp.generated.resources.continue_coures
+import ktskotlinproject.composeapp.generated.resources.load_error
+import ktskotlinproject.composeapp.generated.resources.loading
 import ktskotlinproject.composeapp.generated.resources.main_screen
 import ktskotlinproject.composeapp.generated.resources.my_active_courses
 import ktskotlinproject.composeapp.generated.resources.my_reviews
 import ktskotlinproject.composeapp.generated.resources.no_active_courses
+import ktskotlinproject.composeapp.generated.resources.retry
 import ktskotlinproject.composeapp.generated.resources.wishlist
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
@@ -85,6 +85,7 @@ fun CoursesScreen(
     val listState = rememberLazyListState()
 
     val mainScreenCourses = state.courses.take(2)  // только 2 курса
+    val allCourses = state.courses
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -137,7 +138,7 @@ fun CoursesScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Загрузка курсов...",
+                            text = stringResource(Res.string.loading),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -164,7 +165,7 @@ fun CoursesScreen(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Ошибка загрузки",
+                            text = stringResource(Res.string.load_error),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -182,7 +183,7 @@ fun CoursesScreen(
                                 containerColor = MaterialTheme.colorScheme.primary
                             )
                         ) {
-                            Text("Повторить")
+                            Text(stringResource(Res.string.retry))
                         }
                     }
                 }
@@ -205,8 +206,9 @@ fun CoursesScreen(
 
                     // Header
                     item {
-                        MyCoursesHeader(
-                            count = state.courses.size, // Показываем общее количество
+                        SectionHeader(
+                            title = stringResource(Res.string.my_active_courses),
+                            count = state.courses.size,
                             onViewAllClick = onAllCoursesClick,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                         )
@@ -221,6 +223,27 @@ fun CoursesScreen(
                             onContinueClick = { onCourseClick(course.id) },
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                         )
+                    }
+                    if (allCourses.isNotEmpty()) {
+                        item {
+                            SectionHeader(
+                                title = stringResource(Res.string.all_courses),
+                                count = allCourses.size,
+                                onViewAllClick = onAllCoursesClick,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                        }
+
+                        itemsIndexed(
+                            items = allCourses,
+                            key = { _, course -> "all_${course.id}" }
+                        ) { _, course ->
+                            AllCourseItem(
+                                course = course,
+                                onClick = { onCourseClick(course.id) },
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            )
+                        }
                     }
                     // Bottom cards
                     item {
@@ -346,9 +369,8 @@ fun ContinueLearningCard(
         }
     }
 }
-
 @Composable
-fun MyCoursesHeader(
+fun AllCoursesHeader(
     count: Int,
     onViewAllClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -363,6 +385,158 @@ fun MyCoursesHeader(
         ) {
             Text(
                 text = stringResource(Res.string.my_active_courses),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Count badge
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = count.toString(),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+        }
+
+        // View all button
+        TextButton(
+            onClick = onViewAllClick,
+            colors = ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colorScheme.primary
+            )
+        ) {
+            Text("Все")
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+@Composable
+fun AllCourseItem(
+    course: Course,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Image
+            Box(
+                modifier = Modifier
+                    .size(50.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                if (course.coverUrl != null) {
+                    AsyncImage(
+                        model = course.coverUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "📚",
+                            fontSize = 20.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Title and info
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(
+                    text = course.title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "⭐ ${course.rating}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "👤 ${course.author}",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Arrow icon
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(
+    title: String,
+    count: Int,
+    onViewAllClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface

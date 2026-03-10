@@ -12,7 +12,7 @@ import androidx.navigation.compose.rememberNavController
 import org.koin.compose.KoinApplication
 import org.kts.tazmin.feature.auth.di.authModule
 import org.kts.tazmin.feature.auth.presentation.ui.LoginScreen
-import org.kts.tazmin.feature.auth.presentation.ui.WelcomeScreen
+import org.kts.tazmin.feature.auth.presentation.ui.OnboardingScreen
 import org.kts.tazmin.feature.courses.di.coursesModule
 import org.kts.tazmin.feature.courses.presentation.ui.AllCoursesScreen
 import org.kts.tazmin.feature.courses.presentation.ui.CoursesScreen
@@ -43,7 +43,7 @@ fun App() {
                     startDestination = Screen.Welcome.route,
                 ) {
                     composable(Screen.Welcome.route) {
-                        WelcomeScreen(
+                        OnboardingScreen(
                             onLoginClick = {
                                 navController.navigate(Screen.Login.route) {
                                     popUpTo(Screen.Welcome.route) {

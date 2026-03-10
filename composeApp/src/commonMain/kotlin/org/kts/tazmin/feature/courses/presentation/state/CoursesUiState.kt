@@ -17,3 +17,4 @@ data class CoursesUiState(
     val displayedCourses: List<Course>
         get() = if (searchQuery.isBlank()) courses else searchResults
 }
+

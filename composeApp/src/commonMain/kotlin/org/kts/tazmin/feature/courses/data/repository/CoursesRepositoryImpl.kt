@@ -1,13 +1,9 @@
 package org.kts.tazmin.feature.courses.data.repository
 
 import io.github.aakira.napier.Napier
-import org.kts.tazmin.core.network.HttpClientFactory
 import org.kts.tazmin.feature.courses.data.mapper.CourseMapper
 import org.kts.tazmin.feature.courses.data.model.CoursesPage
-import org.kts.tazmin.feature.courses.data.model.CoursesResponse
-import org.kts.tazmin.feature.courses.data.model.Meta
 import org.kts.tazmin.feature.courses.data.network.api.CoursesApi
-import org.kts.tazmin.feature.courses.domain.entity.Course
 import org.kts.tazmin.feature.courses.domain.repository.CoursesRepository
 
 class CoursesRepositoryImpl(
