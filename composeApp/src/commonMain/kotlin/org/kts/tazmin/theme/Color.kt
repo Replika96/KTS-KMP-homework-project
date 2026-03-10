@@ -2,55 +2,62 @@ package org.kts.tazmin.theme
 
 import androidx.compose.ui.graphics.Color
 
-// основные цвета RedCat
-val GingerCat = Color(0xFFFF8A5C)    // основной
-//val KittenPink = Color(0xFFFFB7B7)
-val CreamPaws = Color(0xFFFFE9D6)
-val SoftWhiskers = Color(0xFFF5E6D3)
-val CatNose = Color(0xFFFF9E9E)
-val CozyBrown = Color(0xFF8B5E3C)
-val NightPaws = Color(0xFFC6623B)
+val Primary = Color(0xFF6B7FA3)       // спокойный сине-серый
+val PrimaryContainer = Color(0xFFDDE3F1)
 
+val Secondary = Color(0xFF8C8C8C)     // нейтральный серый
+val SecondaryContainer = Color(0xFFE5E5E5)
+
+val Tertiary = Color(0xFFA67C6B)      // мягкий теплый акцент
+val TertiaryContainer = Color(0xFFF1E4DE)
+
+val Background = Color(0xFFF7F7F7)    // почти белый
+val Surface = Color(0xFFFFFFFF)
+val SurfaceVariant = Color(0xFFEDEDED)
+
+val TextPrimary = Color(0xFF1C1C1C)
+val TextSecondary = Color(0xFF4F4F4F)
+val Outline = Color(0xFFD0D0D0)
 val LightThemeColors = AppColors(
-    primary = GingerCat,
+
+    primary = Primary,
     onPrimary = Color.White,
-    primaryContainer = CreamPaws,
-    onPrimaryContainer = CozyBrown,
+    primaryContainer = PrimaryContainer,
+    onPrimaryContainer = TextPrimary,
 
-    secondary = CatNose,
-    onSecondary = CozyBrown,
-    secondaryContainer = CatNose.copy(alpha = 0.2f),
-    onSecondaryContainer = CozyBrown,
+    secondary = Secondary,
+    onSecondary = Color.White,
+    secondaryContainer = SecondaryContainer,
+    onSecondaryContainer = TextPrimary,
 
-    tertiary = CozyBrown,
-    onTertiary = CreamPaws,
-    tertiaryContainer = CozyBrown.copy(alpha = 0.1f),
-    onTertiaryContainer = CozyBrown,
+    tertiary = Tertiary,
+    onTertiary = Color.White,
+    tertiaryContainer = TertiaryContainer,
+    onTertiaryContainer = TextPrimary,
 
-    background = CreamPaws,
-    onBackground = CozyBrown,
+    background = Background,
+    onBackground = TextPrimary,
 
-    surface = Color.White,
-    onSurface = CozyBrown,
-    surfaceVariant = SoftWhiskers,
-    onSurfaceVariant = CozyBrown.copy(alpha = 0.8f),
+    surface = Surface,
+    onSurface = TextPrimary,
+    surfaceVariant = SurfaceVariant,
+    onSurfaceVariant = TextSecondary,
 
-    error = Color(0xFFE57373),
+    error = Color(0xFFB3261E),
     onError = Color.White,
-    errorContainer = Color(0xFFFFCDD2),
-    onErrorContainer = Color(0xFFB71C1C),
+    errorContainer = Color(0xFFF9DEDC),
+    onErrorContainer = Color(0xFF410E0B),
 
-    outline = GingerCat.copy(alpha = 0.3f),
-    outlineVariant = SoftWhiskers,
+    outline = Outline,
+    outlineVariant = SurfaceVariant,
 
-    inverseSurface = CozyBrown,
-    inverseOnSurface = CreamPaws,
-    inversePrimary = CatNose,
+    inverseSurface = TextPrimary,
+    inverseOnSurface = Color.White,
+    inversePrimary = Primary,
 
     shadow = Color.Black.copy(alpha = 0.1f),
     scrim = Color.Black.copy(alpha = 0.3f)
 )
-
 /*val DarkThemeColors = AppColors(
     primary = CatNose,
     onPrimary = CozyBrown,

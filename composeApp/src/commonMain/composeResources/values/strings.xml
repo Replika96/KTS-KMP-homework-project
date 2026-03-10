@@ -19,4 +19,7 @@
     <string name="my_active_courses">Мои курсы</string>
     <string name="my_reviews">Мои отзывы</string>
     <string name="wishlist">Список желаний</string>
+    <string name="auth_error">Ошибка авторизации</string>
+
+    <string name="login_with_stepik">Войти через Stepik</string>
 </resources>
