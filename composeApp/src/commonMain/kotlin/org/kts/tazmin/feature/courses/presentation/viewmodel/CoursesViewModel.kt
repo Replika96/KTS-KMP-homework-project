@@ -148,7 +148,6 @@ class CoursesViewModel(
 
             result.fold(
                 onSuccess = { response ->
-
                     _state.update {
                         it.copy(
                             courses = it.courses + response.courses,
@@ -157,19 +156,16 @@ class CoursesViewModel(
                             isLoadingMore = false
                         )
                     }
-
                 },
                 onFailure = { error ->
 
                     Napier.e("Ошибка загрузки следующей страницы", error)
-
                     _state.update {
                         it.copy(
                             isLoadingMore = false,
                             coursesError = error.message
                         )
                     }
-
                 }
             )
         }

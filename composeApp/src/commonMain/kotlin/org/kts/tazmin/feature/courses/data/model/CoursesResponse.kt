@@ -23,16 +23,30 @@ data class Meta(
 data class CourseDto(
     val id: Int,
     val title: String,
-    val summary: String? = null,
     val cover: String? = null,
     val authors: List<Int>? = null,
+    val summary: String? = null,
     @SerialName("learners_count")
     val learnersCount: Int? = null,
-    @SerialName("average_rating")
-    val averageRating: Double? = null,
+    @SerialName("review_summary")
+    val reviewSummary: Int? = null,
+    @SerialName("display_price")
+    val displayPrice: String? = null,
+    @SerialName("is_paid")
+    val isPaid: Boolean? = null,
     val language: String? = null
 )
-
+@Serializable
+data class ReviewSummaryDto(
+    val id: Int,
+    val average: Double? = null,
+    val count: Int? = null
+)
+@Serializable
+data class ReviewSummaryResponse(
+    @SerialName("course-review-summaries")
+    val reviewSummaries: List<ReviewSummaryDto>
+)
 data class CoursesPage(
     val courses: List<Course>,
     val page: Int,

@@ -6,6 +6,8 @@ import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.parameter
 import org.kts.tazmin.feature.courses.data.model.CoursesResponse
+import org.kts.tazmin.feature.courses.data.model.ReviewSummaryDto
+import org.kts.tazmin.feature.courses.data.model.ReviewSummaryResponse
 
 class CoursesApi(
     private val client: HttpClient,
@@ -31,5 +33,12 @@ class CoursesApi(
             parameter("page", page)
             parameter("page_size", pageSize)
         }.body()
+    }
+
+    suspend fun getReviewSummary(id: Int): ReviewSummaryDto {
+        val response: ReviewSummaryResponse =
+            client.get("$baseUrl/api/course-review-summaries/$id").body()
+
+        return response.reviewSummaries.first()
     }
 }

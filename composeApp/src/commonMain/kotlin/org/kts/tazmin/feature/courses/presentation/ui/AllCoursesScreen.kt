@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import ktskotlinproject.composeapp.generated.resources.Res
 import ktskotlinproject.composeapp.generated.resources.all_courses
+import ktskotlinproject.composeapp.generated.resources.free
 import ktskotlinproject.composeapp.generated.resources.search_courses
 import ktskotlinproject.composeapp.generated.resources.students
 import org.jetbrains.compose.resources.stringResource
@@ -74,7 +75,7 @@ fun AllCoursesScreen(
                 .padding(padding)
         ) {
 
-            // 🔎 SEARCH BAR
+            // Search
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = {
@@ -113,7 +114,7 @@ fun AllCoursesScreen(
                         onClick = { onCourseClick(course.id) }
                     )
 
-                    // 📜 PAGINATION
+                    // Pagination
                     if (state.searchQuery.isBlank() &&
                         index >= coursesToShow.lastIndex - 1
                     ) {
@@ -125,7 +126,7 @@ fun AllCoursesScreen(
                     }
                 }
 
-                // ⏳ PAGINATION LOADER
+                // Pagination loader
                 if (state.isLoadingMore) {
                     item {
                         Box(
@@ -139,7 +140,7 @@ fun AllCoursesScreen(
                     }
                 }
 
-                // ⏳ SEARCH LOADER
+                // Search loader
                 if (state.isSearching) {
                     item {
                         Box(
@@ -173,9 +174,7 @@ fun CourseCatalogItem(
             containerColor = MaterialTheme.colorScheme.surface,
             contentColor = MaterialTheme.colorScheme.onSurface
         ),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp
-        )
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
 
         Row(
@@ -206,6 +205,16 @@ fun CourseCatalogItem(
                     overflow = TextOverflow.Ellipsis
                 )
 
+                Spacer(Modifier.height(2.dp))
+
+                Text(
+                    text = course.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
                 Spacer(Modifier.height(4.dp))
 
                 Text(
@@ -216,8 +225,9 @@ fun CourseCatalogItem(
 
                 Spacer(Modifier.height(6.dp))
 
-                Row {
-
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = "⭐ ${course.rating}",
                         style = MaterialTheme.typography.bodySmall
@@ -228,6 +238,17 @@ fun CourseCatalogItem(
                     Text(
                         text = "${course.studentsCount} ${stringResource(Res.string.students)}",
                         style = MaterialTheme.typography.bodySmall
+                    )
+
+                    Spacer(Modifier.width(12.dp))
+
+                    Text(
+                        text = if (course.isPaid && course.price != null)
+                            course.price
+                        else
+                            stringResource(Res.string.free),
+                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
             }

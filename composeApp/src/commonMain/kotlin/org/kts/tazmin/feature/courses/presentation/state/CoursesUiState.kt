@@ -14,7 +14,7 @@ data class CoursesUiState(
     val isSearching: Boolean = false,
     val searchResults: List<Course> = emptyList()
 ){
-    val displayedCourses: List<Course>
-        get() = if (searchQuery.isBlank()) courses else searchResults
+    //val displayedCourses: List<Course>
+    //    get() = if (searchQuery.isBlank()) courses else searchResults
 }
 

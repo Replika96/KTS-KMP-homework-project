@@ -1,8 +1,12 @@
 package org.kts.tazmin.feature.courses.data.repository
 
 import io.github.aakira.napier.Napier
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import org.kts.tazmin.feature.courses.data.mapper.CourseMapper
 import org.kts.tazmin.feature.courses.data.model.CoursesPage
+import org.kts.tazmin.feature.courses.data.model.ReviewSummaryDto
 import org.kts.tazmin.feature.courses.data.network.api.CoursesApi
 import org.kts.tazmin.feature.courses.domain.repository.CoursesRepository
 
@@ -17,8 +21,11 @@ class CoursesRepositoryImpl(
         return try {
 
             val response = api.getCourses(page, pageSize)
-
-            val courses = CourseMapper.mapToDomainList(response.courses)
+            val reviewMap: Map<Int, ReviewSummaryDto> = response.courses.mapNotNull { dto ->
+                val review = dto.reviewSummary?.let { api.getReviewSummary(it) }
+                if (review != null) dto.id to review else null
+            }.toMap()
+            val courses = CourseMapper.mapToDomainList(response.courses, reviewMap)
 
             val result = CoursesPage(
                 courses = courses,

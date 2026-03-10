@@ -57,6 +57,7 @@ import coil3.compose.AsyncImage
 import ktskotlinproject.composeapp.generated.resources.Res
 import ktskotlinproject.composeapp.generated.resources.all_courses
 import ktskotlinproject.composeapp.generated.resources.continue_coures
+import ktskotlinproject.composeapp.generated.resources.free
 import ktskotlinproject.composeapp.generated.resources.load_error
 import ktskotlinproject.composeapp.generated.resources.loading
 import ktskotlinproject.composeapp.generated.resources.main_screen
@@ -86,7 +87,6 @@ fun CoursesScreen(
 
     val mainScreenCourses = state.courses.take(2)  // только 2 курса
     val allCourses = state.courses
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -369,62 +369,7 @@ fun ContinueLearningCard(
         }
     }
 }
-@Composable
-fun AllCoursesHeader(
-    count: Int,
-    onViewAllClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(Res.string.my_active_courses),
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Count badge
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = count.toString(),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-        }
-
-        // View all button
-        TextButton(
-            onClick = onViewAllClick,
-            colors = ButtonDefaults.textButtonColors(
-                contentColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Text("Все")
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-    }
-}
 @Composable
 fun AllCourseItem(
     course: Course,
@@ -507,6 +452,19 @@ fun AllCourseItem(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Price
+                Text(
+                    text = if (course.isPaid && course.price != null)
+                        course.price
+                    else
+                        stringResource(Res.string.free),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.primary
+                )
             }
 
             // Arrow icon
