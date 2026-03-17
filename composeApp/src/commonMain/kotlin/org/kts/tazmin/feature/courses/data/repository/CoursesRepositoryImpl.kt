@@ -3,6 +3,7 @@ package org.kts.tazmin.feature.courses.data.repository
 import coil3.network.HttpException
 import io.github.aakira.napier.Napier
 import kotlinx.io.IOException
+import org.kts.tazmin.core.common.Source
 import org.kts.tazmin.feature.courses.data.local.CourseDao
 import org.kts.tazmin.feature.courses.data.mapper.CourseDbMapper.toDomain
 import org.kts.tazmin.feature.courses.data.mapper.CourseDbMapper.toEntity
@@ -13,6 +14,7 @@ import org.kts.tazmin.feature.courses.data.model.ReviewSummaryDto
 import org.kts.tazmin.feature.courses.data.network.api.CoursesApi
 import org.kts.tazmin.feature.courses.domain.entity.Course
 import org.kts.tazmin.feature.courses.domain.repository.CoursesRepository
+import org.kts.tazmin.feature.courses.presentation.state.CoursesResult
 import kotlin.coroutines.cancellation.CancellationException
 
 class CoursesRepositoryImpl(
@@ -24,8 +26,10 @@ class CoursesRepositoryImpl(
     override suspend fun getCourses(
         page: Int,
         pageSize: Int
-    ): Result<CoursesPage> = try {
-        runCatching {
+    ): CoursesResult {
+
+        // пробуем сеть
+        try {
             val response = api.getCourses(page, pageSize)
 
             val reviewMap = loadReviewMap(response.courses)
@@ -33,65 +37,93 @@ class CoursesRepositoryImpl(
             val courses = courseMapper.mapToDomainList(response.courses, reviewMap)
 
             saveCoursesToCache(courses, page, null)
-
-            CoursesPage(
-                courses = courses,
-                page = response.meta.page,
-                hasNext = response.meta.hasNext
+            Napier.d(tag = "getCourses error", message = "Курсы сохранены в кеш")
+            return CoursesResult.Success(
+                data = CoursesPage(
+                    courses = courses,
+                    page = response.meta.page,
+                    hasNext = response.meta.hasNext
+                ),
+                source = Source.REMOTE
             )
-        }.recoverCatching { e ->
+
+        } catch (e: Exception) {
+
             if (e is CancellationException) throw e
 
-            if (e is IOException || e is HttpException) {
-                val cached = courseDao.getCoursesByPage(page)
-                if (cached.isNotEmpty()) {
-                    val courses = cached.toDomain()
-                    val nextPageExists = courseDao.getCoursesByPage(page + 1).isNotEmpty()
+            Napier.e("getCourses error", e)
 
-                    return@recoverCatching CoursesPage(
+            // fallback на кэш
+            val cached = courseDao.getCoursesByPage(page)
+
+            if (cached.isNotEmpty()) {
+                val courses = cached.toDomain()
+                val nextPageExists = courseDao.getCoursesByPage(page + 1).isNotEmpty()
+
+                return CoursesResult.Error(
+                    message = "Ошибка сети. Показаны сохранённые данные",
+                    cachedData = CoursesPage(
                         courses = courses,
                         page = page,
                         hasNext = nextPageExists
                     )
-                }
+                )
             }
-            throw e
+
+            return CoursesResult.Error(
+                message = e.message ?: "Ошибка загрузки"
+            )
         }
-    } catch (e: CancellationException) {
-        throw e
     }
 
     override suspend fun searchCourses(
         query: String,
         page: Int
-    ): Result<CoursesPage> = runCatching {
-        val response = api.searchCourses(query, page)
-        val courses = courseMapper.mapToDomainList(response.courses)
+    ): CoursesResult {
+         try {
 
-        saveCoursesToCache(courses, page, query)
+            val response = api.searchCourses(query, page)
+            val courses = courseMapper.mapToDomainList(response.courses)
 
-        CoursesPage(
-            courses = courses,
-            page = response.meta.page,
-            hasNext = response.meta.hasNext
-        )
-    }.recoverCatching { e ->
-        if (e is CancellationException) throw e
+            saveCoursesToCache(courses, page, query)
 
-        if (e is IOException || e is HttpException) {
-            val cached = courseDao.getSearchResults(query, page)
-            if (cached.isNotEmpty()) {
-                val courses = cached.toDomain()
-                val nextPageExists = courseDao.getSearchResults(query, page + 1).isNotEmpty()
-
-                return@recoverCatching CoursesPage(
+            return CoursesResult.Success(
+                data = CoursesPage(
                     courses = courses,
-                    page = page,
-                    hasNext = nextPageExists
-                )
-            }
-        }
-        throw e
+                    page = response.meta.page,
+                    hasNext = response.meta.hasNext
+                ),
+                source = Source.REMOTE
+            )
+        }  catch (e: Exception) {
+
+             if (e is CancellationException) throw e
+
+             Napier.e("searchCourses error", e)
+
+             if (e is IOException || e is HttpException) {
+                 val cached = courseDao.getSearchResults(query, page)
+
+                 if (cached.isNotEmpty()) {
+                     val courses = cached.toDomain()
+                     val nextPageExists =
+                         courseDao.getSearchResults(query, page + 1).isNotEmpty()
+
+                     return CoursesResult.Error(
+                         cachedData = CoursesPage(
+                             courses = courses,
+                             page = page,
+                             hasNext = nextPageExists
+                         ),
+                         message = "Ошибка сети. Показаны сохраненные результаты"
+                     )
+                 }
+             }
+
+             return CoursesResult.Error(
+                 message = e.message ?: "Ошибка поиска"
+             )
+         }
     }
 
     private suspend fun loadReviewMap(courseDtos: List<CourseDto>): Map<Int, ReviewSummaryDto> {

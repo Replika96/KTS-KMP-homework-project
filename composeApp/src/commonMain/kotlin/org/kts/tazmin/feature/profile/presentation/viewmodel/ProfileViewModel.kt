@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.io.IOException
+import org.kts.tazmin.core.common.Resource
+import org.kts.tazmin.core.common.Source
 import org.kts.tazmin.feature.profile.domain.usecase.GetUserUseCase
 import org.kts.tazmin.feature.profile.domain.usecase.LogoutUseCase
 import org.kts.tazmin.feature.profile.presentation.state.ProfileUiState
@@ -21,63 +23,44 @@ class ProfileViewModel(
 
     fun loadProfile() {
         viewModelScope.launch {
-            _state.value = ProfileUiState.Loading
+            getUserUseCase().collect { resource ->
 
-            getUserUseCase().fold(
-                onSuccess = { currentUser ->
-                    _state.value = ProfileUiState.Success(
-                        user = currentUser,
-                        isFromCache = false
-                    )
-                },
-                onFailure = { throwable ->
-                    // ошибка сети и нет кэша?
-                    if (throwable is IOException && throwable.message?.contains("Нет сети и нет кэша") == true) {
-                        _state.value = ProfileUiState.Error(
-                            message = "Нет подключения к интернету и нет сохраненных данных"
-                        )
-                    } else {
-                        _state.value = ProfileUiState.Error(
-                            message = throwable.message ?: "Unknown error"
+                _state.value = when (resource) {
+
+                    is Resource.Loading -> {
+                        ProfileUiState.Loading
+                    }
+
+                    is Resource.Success -> {
+                        ProfileUiState.Success(
+                            user = resource.data,
+                            isFromCache = resource.source == Source.CACHE,
+                            isRefreshing = resource.source == Source.CACHE,
+                            error = null
                         )
                     }
+
+                    is Resource.Error -> {
+                        if (resource.data != null) {
+                            // есть кэш, то показываем его и ошибку
+                            ProfileUiState.Success(
+                                user = resource.data,
+                                isFromCache = true,
+                                isRefreshing = false,
+                                error = resource.message
+                            )
+                        } else {
+                            // вообще ничего нет
+                            ProfileUiState.Error(resource.message)
+                        }
+                    }
                 }
-            )
+            }
         }
     }
 
     fun refreshProfile() {
-        viewModelScope.launch {
-            val currentState = _state.value
-
-            if (currentState is ProfileUiState.Success) {
-                // идет обновление, но старые данные остаются
-                _state.value = currentState.copy(isRefreshing = true, error = null)
-
-                getUserUseCase().fold(
-                    onSuccess = { user ->
-                        _state.value = ProfileUiState.Success(
-                            user = user,
-                        )
-                    },
-                    onFailure = { throwable ->
-                        if (throwable is IOException) {
-                            // показываем старые данные с предупреждением
-                            _state.value = currentState.copy(
-                                isRefreshing = false,
-                                error = "Не удалось обновить данные. Показаны сохраненные данные."
-                            )
-                        } else {
-                            _state.value = ProfileUiState.Error(
-                                message = throwable.message ?: "Error"
-                            )
-                        }
-                    }
-                )
-            } else {
-                loadProfile()
-            }
-        }
+        loadProfile()
     }
 
     fun logout() {

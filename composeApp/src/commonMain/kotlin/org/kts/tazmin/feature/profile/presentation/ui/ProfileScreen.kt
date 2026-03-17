@@ -1,6 +1,11 @@
 package org.kts.tazmin.feature.profile.presentation.ui
 
-import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,7 +28,6 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.School
@@ -36,12 +40,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.pulltorefresh.PullToRefreshState
-import androidx.compose.material3.pulltorefresh.pullToRefresh
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -64,7 +65,6 @@ import ktskotlinproject.composeapp.generated.resources.followers_label
 import ktskotlinproject.composeapp.generated.resources.information
 import ktskotlinproject.composeapp.generated.resources.joined_prefix
 import ktskotlinproject.composeapp.generated.resources.knowledge_label
-import ktskotlinproject.composeapp.generated.resources.loading
 import ktskotlinproject.composeapp.generated.resources.private_profile
 import ktskotlinproject.composeapp.generated.resources.profile_visibility
 import ktskotlinproject.composeapp.generated.resources.public_profile
@@ -106,7 +106,7 @@ fun ProfileScreen(
     when (val currentState = state) {
 
         ProfileUiState.Loading -> {
-            ProfileLoading()
+            ProfileLoadingView()
         }
 
         is ProfileUiState.Success -> {
@@ -136,33 +136,6 @@ fun ProfileScreen(
     }
 }
 
-@Composable
-fun ProfileLoading() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-
-            CircularProgressIndicator(
-                color = MaterialTheme.colorScheme.primary
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text(
-                text = stringResource(Res.string.loading),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-        }
-
-    }
-}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -175,19 +148,11 @@ fun ProfileContent(
     isFromCache: Boolean,
     onErrorDismiss: () -> Unit
 ) {
-
-    val pullState = rememberPullToRefreshState()
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .pullToRefresh(
-                state = pullState,
-                isRefreshing = isRefreshing,
-                onRefresh = onRefresh
-            )
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = Modifier.fillMaxSize()
     ) {
-
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -223,63 +188,6 @@ fun ProfileContent(
             }
 
         }
-
-        PullToRefreshContainer(
-            state = pullState,
-            modifier = Modifier.align(Alignment.TopCenter),
-            isRefreshing = isRefreshing
-
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun PullToRefreshContainer(
-    state: PullToRefreshState,
-    modifier: Modifier = Modifier,
-    isRefreshing: Boolean
-) {
-
-    AnimatedVisibility(
-        visible = state.distanceFraction > 0f || isRefreshing,
-        modifier = modifier
-    ) {
-
-        Surface(
-            shape = RoundedCornerShape(20.dp),
-            tonalElevation = 6.dp,
-            shadowElevation = 6.dp,
-            color = MaterialTheme.colorScheme.surface
-        ) {
-
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-
-                if (isRefreshing) {
-
-                    CircularProgressIndicator(
-                        strokeWidth = 3.dp,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-
-                } else {
-
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = null,
-                        modifier = Modifier.size(28.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-            }
-
-        }
-
     }
 }
 
@@ -705,8 +613,331 @@ fun ProfileScreenPreview() {
             onLogout = { },
             error = null,
             isFromCache = false,
-            onErrorDismiss = {  },
+            onErrorDismiss = { },
         )
     }
 }
 
+@Composable
+fun ProfileLoadingView() {
+    val infiniteTransition = rememberInfiniteTransition()
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        contentPadding = PaddingValues(
+            horizontal = 16.dp,
+            vertical = 24.dp
+        ),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        // header Section Skeleton
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                            )
+                        )
+                    )
+            ) {
+                // logout button skeleton
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp)
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.2f))
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(top = 32.dp, start = 16.dp, end = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    // avatar skeleton
+                    Box(
+                        modifier = Modifier
+                            .size(96.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.surface.copy(alpha = alpha))
+                            .shadow(10.dp, CircleShape)
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // name skeleton
+                    Box(
+                        modifier = Modifier
+                            .width(150.dp)
+                            .height(24.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = alpha * 0.5f))
+                    )
+
+                    // private account badge skeleton
+                    Box(
+                        modifier = Modifier
+                            .width(100.dp)
+                            .height(16.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.onPrimary.copy(alpha = alpha * 0.3f))
+                            .padding(top = 6.dp)
+                    )
+                }
+            }
+        }
+
+        // bio Card Skeleton
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Icon skeleton
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha * 0.5f))
+                        )
+
+                        Spacer(modifier = Modifier.width(10.dp))
+
+                        // title skeleton
+                        Box(
+                            modifier = Modifier
+                                .width(80.dp)
+                                .height(20.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = alpha * 0.3f))
+                        )
+                    }
+
+                    HorizontalDivider()
+
+                    // bio text skeleton
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        repeat(3) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(if (it == 2) 0.7f else 1f)
+                                    .height(16.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha * 0.3f))
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // stats Card Skeleton
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // title skeleton
+                    Box(
+                        modifier = Modifier
+                            .width(120.dp)
+                            .height(24.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = alpha * 0.3f))
+                    )
+
+                    // stats row skeleton
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        repeat(4) { index ->
+                            StatItemSkeleton(alpha = alpha)
+
+                            if (index < 3) {
+                                VerticalDivider(
+                                    modifier = Modifier
+                                        .height(40.dp)
+                                        .width(1.dp)
+                                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // meta Card Skeleton
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // title skeleton
+                    Box(
+                        modifier = Modifier
+                            .width(100.dp)
+                            .height(24.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = alpha * 0.3f))
+                    )
+
+                    // joined date skeleton
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha * 0.5f))
+                        )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Box(
+                                modifier = Modifier
+                                    .width(80.dp)
+                                    .height(14.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha * 0.3f))
+                            )
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .width(120.dp)
+                                    .height(18.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = alpha * 0.3f))
+                            )
+                        }
+                    }
+
+                    HorizontalDivider()
+
+                    // visibility skeleton
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha * 0.5f))
+                        )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column {
+                            Box(
+                                modifier = Modifier
+                                    .width(100.dp)
+                                    .height(14.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha * 0.3f))
+                            )
+
+                            Spacer(modifier = Modifier.height(4.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .width(80.dp)
+                                    .height(18.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = alpha * 0.3f))
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatItemSkeleton(alpha: Float) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        // icon skeleton
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha * 0.5f))
+        )
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // value skeleton
+        Box(
+            modifier = Modifier
+                .width(40.dp)
+                .height(20.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = alpha * 0.3f))
+        )
+
+        Spacer(modifier = Modifier.height(2.dp))
+
+        // label skeleton
+        Box(
+            modifier = Modifier
+                .width(50.dp)
+                .height(14.dp)
+                .clip(RoundedCornerShape(4.dp))
+                .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha * 0.3f))
+        )
+    }
+}

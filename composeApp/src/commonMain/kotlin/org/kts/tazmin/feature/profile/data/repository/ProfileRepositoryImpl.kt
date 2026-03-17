@@ -1,8 +1,10 @@
 package org.kts.tazmin.feature.profile.data.repository
 
-import coil3.network.HttpException
 import io.github.aakira.napier.Napier
-import kotlinx.io.IOException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
+import org.kts.tazmin.core.common.Resource
+import org.kts.tazmin.core.common.Source
 import org.kts.tazmin.feature.profile.data.local.UserDao
 import org.kts.tazmin.feature.profile.data.mapper.UserDbMapper.toDomain
 import org.kts.tazmin.feature.profile.data.mapper.UserDbMapper.toEntity
@@ -18,29 +20,61 @@ class ProfileRepositoryImpl(
     private val userMapper: UserMapper
 ) : ProfileRepository {
 
-    override suspend fun getCurrentUser(): Result<User> = runCatching {
-        val response = userApi.getUser()
-        val userDto = response.users.firstOrNull()
-            ?: throw IllegalStateException("Список пользователей пуст")
+    override fun getCurrentUser(): Flow<Resource<User>> = flow {
 
-        val user = userMapper.mapToDomain(userDto)
+        // сначала пробуем кэш
+        val cached = userDao.getUser()
 
+        if (cached != null) {
+            emit(
+                Resource.Success(
+                    data = cached.toDomain(),
+                    source = Source.CACHE
+                )
+            )
+        } else {
+            emit(Resource.Loading)
+        }
 
-        userDao.insert(user.toEntity())
-        Napier.d("getCurrentUser: сохранено в кеш")
-        user
-    }.recoverCatching { e ->
-        if (e is CancellationException) throw e
-        Napier.e("getCurrentUser ошибка", e)
-        if (e is IOException || e is HttpException) {
-            val cached = userDao.getUser()
+        // пробуем сеть
+        try {
+            val response = userApi.getUser()
+            val userDto = response.users.firstOrNull()
+                ?: throw IllegalStateException("Список пользователей пуст")
+
+            val user = userMapper.mapToDomain(userDto)
+
+            // сохраняем в БД
+            userDao.insert(user.toEntity())
+
+            emit(
+                Resource.Success(
+                    data = user,
+                    source = Source.REMOTE
+                )
+            )
+
+        } catch (e: Exception) {
+
+            if (e is CancellationException) throw e
+
+            Napier.e("getCurrentUser error", e)
+
+            // если есть кэш просто ошибка поверх него
             if (cached != null) {
-                Napier.d("getCurrentUser: кэш найден")
-                return@recoverCatching cached.toDomain()
-            } else{
-                Napier.d("getCurrentUser: кэша нет")
+                emit(
+                    Resource.Error(
+                        message = "Не удалось обновить данные",
+                        data = cached.toDomain()
+                    )
+                )
+            } else {
+                emit(
+                    Resource.Error(
+                        message = e.message ?: "Ошибка загрузки"
+                    )
+                )
             }
         }
-        throw e
     }
 }

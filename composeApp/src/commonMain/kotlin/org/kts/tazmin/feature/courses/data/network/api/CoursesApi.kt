@@ -15,7 +15,7 @@ class CoursesApi(
     private val client: HttpClient,
 ) {
     suspend fun getCourses(
-        page: Int = 1,
+        page: Int = 2,
         pageSize: Int = 20
     ): CoursesResponse {
         Napier.d(tag = "CourseApi", message = "Запрос курсов: page=$page, pageSize=$pageSize")
@@ -28,6 +28,7 @@ class CoursesApi(
 
             Napier.d(tag = "CourseApi", message = "Ответ сервера: всего курсов=${response.courses.size}," +
                     " page=${response.meta.page}, hasNext=${response.meta.hasNext}")
+
             Napier.d("Первые 3 курса: ${response.courses.take(3).map { it.title }}")
 
             response

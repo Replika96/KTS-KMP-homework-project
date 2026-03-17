@@ -7,10 +7,9 @@ import org.kts.tazmin.feature.courses.data.mapper.CourseMapper
 import org.kts.tazmin.feature.courses.data.network.api.CoursesApi
 import org.kts.tazmin.feature.courses.data.repository.CoursesRepositoryImpl
 import org.kts.tazmin.feature.courses.domain.repository.CoursesRepository
-import org.kts.tazmin.feature.courses.domain.usacase.GetCoursesUseCase
-import org.kts.tazmin.feature.courses.domain.usacase.SearchCoursesUseCase
+import org.kts.tazmin.feature.courses.domain.usecase.GetCoursesUseCase
+import org.kts.tazmin.feature.courses.domain.usecase.SearchCoursesUseCase
 import org.kts.tazmin.feature.courses.presentation.viewmodel.CoursesViewModel
-import org.kts.tazmin.feature.profile.data.mapper.UserMapper
 
 val coursesModule = module {
     // API

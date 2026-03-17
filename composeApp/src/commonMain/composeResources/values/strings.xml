@@ -35,7 +35,9 @@
     <string name="login_with_stepik">Войти через Stepik</string>
     <string name="free">Бесплатно</string>
 
-    <!-- strings.xml -->
+    <string name="no_found">Ничего не найдено по запросу</string>
+    <string name="no_courses_available">Нет доступных курсов</string>
+
     <string name="statistics_title">Статистика</string>
     <string name="knowledge_label">Знания</string>
     <string name="information">Информация</string>
@@ -72,4 +74,25 @@
 
     <string name="next">Далее</string>
 
+    <!-- ошибки -->
+    <string name="error_server">Ошибка сервера. Попробуйте позже</string>
+    <string name="error_server_temporary">Сервер временно недоступен. Попробуйте позже</string>
+    <string name="error_no_internet">Нет подключения к интернету</string>
+    <string name="error_timeout">Превышено время ожидания. Проверьте соединение</string>
+    <string name="error_parsing">Ошибка обработки данных</string>
+    <string name="error_unknown">Произошла неизвестная ошибка</string>
+
+    <!-- HTTP статусы -->
+    <string name="error_bad_request">Неверный запрос</string>
+    <string name="error_unauthorized">Требуется авторизация</string>
+    <string name="error_forbidden">Доступ запрещен</string>
+    <string name="error_not_found">Ресурс не найден</string>
+    <string name="error_validation">Ошибка валидации данных</string>
+    <string name="error_client">Ошибка клиента (статус %d)</string>
+    <string name="error_rate_limit">Слишком много запросов. Повторите через %s секунд</string>
+
+    <!-- специфичные для курсов -->
+    <string name="error_course_not_found">Курс не найден</string>
+    <string name="error_courses_load">Не удалось загрузить курсы</string>
+    <string name="error_search">Ошибка при поиске</string>
 </resources>

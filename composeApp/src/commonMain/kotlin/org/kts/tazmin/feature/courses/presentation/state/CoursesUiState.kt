@@ -9,12 +9,10 @@ data class CoursesUiState(
     val page: Int = 1,
     val hasNext: Boolean = true,
     val coursesError: String? = null,
-
+    val isFromCache: Boolean = false,
     val searchQuery: String = "",
     val isSearching: Boolean = false,
-    val searchResults: List<Course> = emptyList()
-){
-    //val displayedCourses: List<Course>
-    //    get() = if (searchQuery.isBlank()) courses else searchResults
-}
+    val searchResults: List<Course> = emptyList(),
+    val cachedInfoMessage: String? = null
+)
 

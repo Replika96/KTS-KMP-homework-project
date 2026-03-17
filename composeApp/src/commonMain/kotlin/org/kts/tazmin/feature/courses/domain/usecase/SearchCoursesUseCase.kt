@@ -1,7 +1,7 @@
-package org.kts.tazmin.feature.courses.domain.usacase
+package org.kts.tazmin.feature.courses.domain.usecase
 
-import org.kts.tazmin.feature.courses.domain.entity.Course
 import org.kts.tazmin.feature.courses.domain.repository.CoursesRepository
+import org.kts.tazmin.feature.courses.presentation.state.CoursesResult
 
 class SearchCoursesUseCase(
     private val repository: CoursesRepository
@@ -10,10 +10,8 @@ class SearchCoursesUseCase(
     suspend operator fun invoke(
         query: String,
         page: Int
-    ): Result<List<Course>> {
+    ): CoursesResult {
 
         return repository.searchCourses(query, page)
-            .map { it.courses }
-
     }
 }
