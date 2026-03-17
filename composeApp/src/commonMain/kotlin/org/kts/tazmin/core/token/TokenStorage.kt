@@ -1,30 +1,25 @@
 package org.kts.tazmin.core.token
 
-import kotlin.time.Clock
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 
-object TokenStorage {
-    private var accessToken: String? = null
-    private var refreshToken: String? = null
-    private var expiresAt: Long = 0
+expect class TokenStorage(
+    dataStore: DataStore<Preferences>
+) {
+    suspend fun saveTokens(
+        accessToken: String,
+        refreshToken: String,
+        expiresIn: Long
+    )
 
-    fun saveTokens(accessToken: String, refreshToken: String, expiresIn: Long) {
-        this.accessToken = accessToken
-        this.refreshToken = refreshToken
-        this.expiresAt = Clock.System.now().toEpochMilliseconds() + expiresIn * 1000
-        println("Токены сохранены: access=$accessToken, refresh=$refreshToken")
-    }
+    suspend fun getAccessToken(): String?
 
-    fun getAccessToken(): String? = accessToken
-    fun getRefreshToken(): String? = refreshToken
+    suspend fun getRefreshToken(): String?
 
-    fun isTokenValid(): Boolean {
-        return accessToken != null && Clock.System.now().toEpochMilliseconds() < expiresAt
-    }
+    suspend fun getExpiresAt(): Long?
 
-    fun clear() {
-        accessToken = null
-        refreshToken = null
-        expiresAt = 0
-        println("Токены очищены")
-    }
+    suspend fun isTokenExpired(): Boolean
+    suspend fun clear()
+
+    suspend fun isLoggedIn(): Boolean
 }

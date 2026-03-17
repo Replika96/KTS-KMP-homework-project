@@ -1,69 +1,133 @@
 package org.kts.tazmin.feature.courses.data.repository
 
+import coil3.network.HttpException
 import io.github.aakira.napier.Napier
+import kotlinx.io.IOException
+import org.kts.tazmin.feature.courses.data.local.CourseDao
+import org.kts.tazmin.feature.courses.data.mapper.CourseDbMapper.toDomain
+import org.kts.tazmin.feature.courses.data.mapper.CourseDbMapper.toEntity
 import org.kts.tazmin.feature.courses.data.mapper.CourseMapper
+import org.kts.tazmin.feature.courses.data.model.CourseDto
 import org.kts.tazmin.feature.courses.data.model.CoursesPage
 import org.kts.tazmin.feature.courses.data.model.ReviewSummaryDto
 import org.kts.tazmin.feature.courses.data.network.api.CoursesApi
+import org.kts.tazmin.feature.courses.domain.entity.Course
 import org.kts.tazmin.feature.courses.domain.repository.CoursesRepository
+import kotlin.coroutines.cancellation.CancellationException
 
 class CoursesRepositoryImpl(
-    private val api: CoursesApi
+    private val api: CoursesApi,
+    private val courseDao: CourseDao,
+    private val courseMapper: CourseMapper
 ) : CoursesRepository {
 
     override suspend fun getCourses(
         page: Int,
         pageSize: Int
-    ): Result<CoursesPage> {
-        return try {
-
+    ): Result<CoursesPage> = try {
+        runCatching {
             val response = api.getCourses(page, pageSize)
-            val reviewMap: Map<Int, ReviewSummaryDto> = response.courses.mapNotNull { dto ->
-                val review = dto.reviewSummary?.let { api.getReviewSummary(it) }
-                if (review != null) dto.id to review else null
-            }.toMap()
-            val courses = CourseMapper.mapToDomainList(response.courses, reviewMap)
 
-            val result = CoursesPage(
+            val reviewMap = loadReviewMap(response.courses)
+
+            val courses = courseMapper.mapToDomainList(response.courses, reviewMap)
+
+            saveCoursesToCache(courses, page, null)
+
+            CoursesPage(
                 courses = courses,
                 page = response.meta.page,
                 hasNext = response.meta.hasNext
             )
+        }.recoverCatching { e ->
+            if (e is CancellationException) throw e
 
-            Result.success(result)
+            if (e is IOException || e is HttpException) {
+                val cached = courseDao.getCoursesByPage(page)
+                if (cached.isNotEmpty()) {
+                    val courses = cached.toDomain()
+                    val nextPageExists = courseDao.getCoursesByPage(page + 1).isNotEmpty()
 
-        } catch (e: Exception) {
-            Result.failure(e)
+                    return@recoverCatching CoursesPage(
+                        courses = courses,
+                        page = page,
+                        hasNext = nextPageExists
+                    )
+                }
+            }
+            throw e
         }
+    } catch (e: CancellationException) {
+        throw e
     }
 
     override suspend fun searchCourses(
         query: String,
         page: Int
-    ): Result<CoursesPage> {
+    ): Result<CoursesPage> = runCatching {
+        val response = api.searchCourses(query, page)
+        val courses = courseMapper.mapToDomainList(response.courses)
 
-        Napier.d(tag = "Repository", message = "Поиск: '$query', page=$page")
+        saveCoursesToCache(courses, page, query)
 
-        return try {
+        CoursesPage(
+            courses = courses,
+            page = response.meta.page,
+            hasNext = response.meta.hasNext
+        )
+    }.recoverCatching { e ->
+        if (e is CancellationException) throw e
 
-            val response = api.searchCourses(query, page)
+        if (e is IOException || e is HttpException) {
+            val cached = courseDao.getSearchResults(query, page)
+            if (cached.isNotEmpty()) {
+                val courses = cached.toDomain()
+                val nextPageExists = courseDao.getSearchResults(query, page + 1).isNotEmpty()
 
-            val courses = CourseMapper.mapToDomainList(response.courses)
-
-            val result = CoursesPage(
-                courses = courses,
-                page = response.meta.page,
-                hasNext = response.meta.hasNext
-            )
-
-            Result.success(result)
-
-        } catch (e: Exception) {
-
-            Napier.e(tag = "Repository", message = "Ошибка поиска $e")
-
-            Result.failure(e)
-
+                return@recoverCatching CoursesPage(
+                    courses = courses,
+                    page = page,
+                    hasNext = nextPageExists
+                )
+            }
         }
+        throw e
+    }
+
+    private suspend fun loadReviewMap(courseDtos: List<CourseDto>): Map<Int, ReviewSummaryDto> {
+        return try {
+            courseDtos
+                .mapNotNull { dto ->
+                    dto.reviewSummary?.let { reviewId ->
+                        runCatching {
+                            api.getReviewSummary(reviewId)
+                        }.getOrNull()?.let { review ->
+                            dto.id to review
+                        }
+                    }
+                }.toMap()
+        } catch (e: Exception) {
+            if (e is CancellationException) throw e
+            Napier.w("Не удалось загрузить некоторые отзывы: ${e.message}")
+            emptyMap()
+        }
+    }
+
+    private suspend fun saveCoursesToCache(
+        courses: List<Course>,
+        page: Int,
+        query: String?
+    ) {
+        if (query == null) {
+            courseDao.clearPage(page)
+        } else {
+            courseDao.clearSearch(query)
+        }
+
+        val entities = courses.map { course ->
+            course.toEntity(page, query)
+        }
+
+        courseDao.insertCourses(entities)
     }
 }

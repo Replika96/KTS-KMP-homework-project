@@ -3,6 +3,8 @@
     <string name="app_title">Stepik</string>
     <string name="welcome_title">Добро пожаловать!</string>
 
+    <string name="close">Закрыть</string>
+
     <string name="login_button">Войти</string>
     <string name="login_title">Вход</string>
     <string name="login_label">Логин</string>
@@ -26,9 +28,48 @@
 
     <string name="auth_error">Ошибка авторизации</string>
     <string name="load_error">Ошибка загрузки</string>
+    <string name="unknown_error">Неизвестная ошибка</string>
     <string name="loading">Загрузка...</string>
     <string name="retry">Повторить</string>
 
     <string name="login_with_stepik">Войти через Stepik</string>
     <string name="free">Бесплатно</string>
+
+    <!-- strings.xml -->
+    <string name="statistics_title">Статистика</string>
+    <string name="knowledge_label">Знания</string>
+    <string name="information">Информация</string>
+    <string name="reputation_label">Репутация</string>
+    <string name="followers_label">Подписчики</string>
+    <string name="solved_steps_label">Решено шагов</string>
+    <string name="rank_template">#%1$d</string>
+    <string name="joined_prefix">Присоединился</string>
+    <string name="years_ago">%d лет назад</string>
+    <string name="year_ago">%d год назад</string>
+    <string name="years_ago_plural">%d года назад</string>
+    <string name="months_ago">%d месяцев назад</string>
+    <string name="month_ago">%d месяц назад</string>
+    <string name="days_ago">%d дней назад</string>
+    <string name="today">Сегодня</string>
+    <string name="yesterday">Вчера</string>
+
+    <string name="about">Обо мне</string>
+    <string name="profile_visibility">Видимость</string>
+    <string name="private_profile">Приватный профиль</string>
+    <string name="public_profile">Публичный профиль</string>
+
+    <string name="onboarding_title_welcome">Добро пожаловать</string>
+    <string name="onboarding_desc_welcome">Изучайте новые навыки и проходите курсы от лучших преподавателей.</string>
+
+    <string name="onboarding_title_courses">Тысячи курсов</string>
+    <string name="onboarding_desc_courses">Используйте поиск и находите курсы по интересам.</string>
+
+    <string name="onboarding_title_pace">Учитесь в своём темпе</string>
+    <string name="onboarding_desc_pace">Сохраняйте курсы и возвращайтесь к ним в любое время.</string>
+
+    <string name="onboarding_title_start">Начнём</string>
+    <string name="onboarding_desc_start">Войдите через Stepik чтобы получить доступ к своим курсам.</string>
+
+    <string name="next">Далее</string>
+
 </resources>

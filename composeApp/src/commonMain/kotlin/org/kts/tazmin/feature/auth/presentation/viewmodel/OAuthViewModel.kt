@@ -8,11 +8,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.kts.tazmin.feature.auth.domain.repository.AuthRepository
+import org.kts.tazmin.feature.auth.domain.usecase.LoginUseCase
 import org.kts.tazmin.feature.auth.presentation.state.OAuthState
 
 class OAuthViewModel(
-    private val authRepository: AuthRepository
+    private val loginUseCase: LoginUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(OAuthState())
@@ -31,11 +31,11 @@ class OAuthViewModel(
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, showWebView = false) }
 
-            val result = authRepository.login(code)
+            val result = loginUseCase(code)
 
             result.fold(
                 onSuccess = { user ->
-                    Napier.d("OAuth успешен: $user")
+                    Napier.d(tag = "OAuth", message = "OAuth успешен: $user")
                     _state.update {
                         it.copy(
                             isLoading = false,
@@ -44,7 +44,7 @@ class OAuthViewModel(
                     }
                 },
                 onFailure = { error ->
-                    Napier.e("OAuth ошибка", error)
+                    Napier.e(tag = "OAuth", message = "OAuth ошибка: $error")
                     _state.update {
                         it.copy(
                             isLoading = false,
@@ -73,4 +73,5 @@ class OAuthViewModel(
     fun resetWebView() {
         _state.update { it.copy(showWebView = false) }
     }
+
 }

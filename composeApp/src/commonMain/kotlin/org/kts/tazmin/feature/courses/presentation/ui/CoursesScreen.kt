@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -40,11 +42,13 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -56,9 +60,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import ktskotlinproject.composeapp.generated.resources.Res
 import ktskotlinproject.composeapp.generated.resources.all_button
-import ktskotlinproject.composeapp.generated.resources.all_courses
 import ktskotlinproject.composeapp.generated.resources.continue_coures
-import ktskotlinproject.composeapp.generated.resources.free
 import ktskotlinproject.composeapp.generated.resources.load_error
 import ktskotlinproject.composeapp.generated.resources.loading
 import ktskotlinproject.composeapp.generated.resources.main_screen
@@ -66,9 +68,10 @@ import ktskotlinproject.composeapp.generated.resources.my_active_courses
 import ktskotlinproject.composeapp.generated.resources.my_reviews
 import ktskotlinproject.composeapp.generated.resources.no_active_courses
 import ktskotlinproject.composeapp.generated.resources.retry
+import ktskotlinproject.composeapp.generated.resources.unknown_error
 import ktskotlinproject.composeapp.generated.resources.wishlist
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 import org.kts.tazmin.feature.courses.domain.entity.Course
 import org.kts.tazmin.feature.courses.presentation.state.CoursesUiEvent
 import org.kts.tazmin.feature.courses.presentation.viewmodel.CoursesViewModel
@@ -77,17 +80,19 @@ import org.kts.tazmin.theme.CatTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoursesScreen(
-    viewModel: CoursesViewModel = koinInject(),
+    viewModel: CoursesViewModel = koinViewModel(),
     onCourseClick: (Int) -> Unit = {},
-    onAllCoursesClick: () -> Unit = {},
+    onCatalogClick: () -> Unit = {},
     onWishlistClick: () -> Unit = {},
     onReviewsClick: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
-    val mainScreenCourses = state.courses.take(2)  // только 2 курса
-    val allCourses = state.courses
+    LaunchedEffect(viewModel) {
+        viewModel.loadCourses()
+    }
+
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -127,133 +132,151 @@ fun CoursesScreen(
         when {
             // Первичная загрузка
             state.isLoading && state.courses.isEmpty() -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(Res.string.loading),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+                CoursesLoading(paddingValues)
             }
 
             // Ошибка
             !state.coursesError.isNullOrBlank() && state.courses.isEmpty() -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(24.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Error,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = stringResource(Res.string.load_error),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = state.coursesError!!,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(modifier = Modifier.height(24.dp))
-                        Button(
-                            onClick = { viewModel.handleEvent(CoursesUiEvent.LoadCourses) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            )
-                        ) {
-                            Text(stringResource(Res.string.retry))
-                        }
-                    }
-                }
+                ErrorView(
+                    error = state.coursesError ?: stringResource(Res.string.unknown_error),
+                    onReload = { viewModel.handleEvent(CoursesUiEvent.LoadCourses) }
+                )
             }
-
+            // успех
             else -> {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
-                    // Continue learning card
-                    item {
-                        ContinueLearningCard(
-                            course = mainScreenCourses.firstOrNull(),
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
+                CoursesContent(
+                    courses = state.courses,
+                    paddingValues = paddingValues,
+                    listState = listState,
+                    onAllCoursesClick = onCatalogClick,
+                    onCourseClick = onCourseClick,
+                    onReviewsClick = onReviewsClick,
+                    onWishlistClick = onWishlistClick
+                )
 
-                    // Header
-                    item {
-                        SectionHeader(
-                            title = stringResource(Res.string.my_active_courses),
-                            count = state.courses.size,
-                            onViewAllClick = onAllCoursesClick,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                        )
-                    }
+            }
+        }
+    }
+}
 
-                    itemsIndexed(
-                        items = mainScreenCourses,
-                        key = { _, course -> course.id }
-                    ) { _, course ->
-                        MyCourseItem(
-                            course = course,
-                            onContinueClick = { onCourseClick(course.id) },
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
-                    }
-                    if (allCourses.isNotEmpty()) {
-                        item {
-                            SectionHeaderAll(
-                                title = stringResource(Res.string.all_courses),
-                                onViewAllClick = onAllCoursesClick,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-                        }
+@Composable
+fun CoursesContent(
+    courses: List<Course>,
+    paddingValues: PaddingValues,
+    listState: LazyListState,
+    onAllCoursesClick: () -> Unit,
+    onCourseClick: (Int) -> Unit,
+    onReviewsClick: () -> Unit,
+    onWishlistClick: () -> Unit
+) {
+    val mainScreenCourses = courses.take(2)
+    LazyColumn(
+        state = listState,
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+    ) {
+        // Continue learning card
+        item {
+            ContinueLearningCard(
+                course = mainScreenCourses.firstOrNull(),
+                modifier = Modifier.padding(16.dp)
+            )
+        }
 
-                        itemsIndexed(
-                            items = allCourses,
-                            key = { _, course -> "all_${course.id}" }
-                        ) { _, course ->
-                            AllCourseItem(
-                                course = course,
-                                onClick = { onCourseClick(course.id) },
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-                    // Bottom cards
-                    item {
-                        ActionCards(
-                            onReviewsClick = onReviewsClick,
-                            onWishlistClick = onWishlistClick,
-                            modifier = Modifier.padding(16.dp)
-                        )
-                    }
-                }
+        // Header
+        item {
+            SectionHeader(
+                title = stringResource(Res.string.my_active_courses),
+                count = courses.size,
+                onViewAllClick = onAllCoursesClick,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+            )
+        }
+
+        itemsIndexed(
+            items = mainScreenCourses,
+            key = { _, course -> course.id }
+        ) { _, course ->
+            MyCourseItem(
+                course = course,
+                onContinueClick = { onCourseClick(course.id) },
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            )
+        }
+        // Bottom cards
+        item {
+            ActionCards(
+                onReviewsClick = onReviewsClick,
+                onWishlistClick = onWishlistClick,
+                modifier = Modifier.padding(16.dp)
+            )
+        }
+    }
+}
+
+
+@Composable
+fun CoursesLoading(paddingValues: PaddingValues) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator(
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(Res.string.loading),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+
+@Composable
+fun ErrorView(error: String, onReload: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(24.dp)
+        ) {
+            Icon(
+                Icons.Default.Error,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(64.dp)
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = stringResource(Res.string.load_error),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = error,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Button(
+                onClick = onReload,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text(stringResource(Res.string.retry))
             }
         }
     }
@@ -371,114 +394,6 @@ fun ContinueLearningCard(
 }
 
 @Composable
-fun AllCourseItem(
-    course: Course,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Image
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                if (course.coverUrl != null) {
-                    AsyncImage(
-                        model = course.coverUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "📚",
-                            fontSize = 20.sp
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Title and info
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Text(
-                    text = course.title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "⭐ ${course.rating}",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Text(
-                        text = "👤 ${course.author}",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(2.dp))
-
-                // Price
-                Text(
-                    text = if (course.isPaid && course.price != null)
-                        course.price
-                    else
-                        stringResource(Res.string.free),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            // Arrow icon
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-    }
-}
-
-@Composable
 fun SectionHeader(
     title: String,
     count: Int,
@@ -535,45 +450,7 @@ fun SectionHeader(
         }
     }
 }
-@Composable
-fun SectionHeaderAll(
-    title: String,
-    onViewAllClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = title,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
 
-            Spacer(modifier = Modifier.width(8.dp))
-        }
-        // View all button
-        TextButton(
-            onClick = onViewAllClick,
-            colors = ButtonDefaults.textButtonColors(
-                contentColor = MaterialTheme.colorScheme.primary
-            )
-        ) {
-            Text(stringResource(Res.string.all_button))
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-    }
-}
 @Composable
 fun MyCourseItem(
     course: Course,
@@ -711,7 +588,6 @@ fun ActionCards(
             title = stringResource(Res.string.wishlist),
             icon = Icons.Outlined.FavoriteBorder,
             iconColor = MaterialTheme.colorScheme.primary,
-            count = 3, // example count
             onClick = onWishlistClick,
             modifier = Modifier.weight(1f)
         )
@@ -721,9 +597,8 @@ fun ActionCards(
 @Composable
 fun ActionCard(
     title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     iconColor: Color,
-    count: Int? = null,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -749,7 +624,6 @@ fun ActionCard(
                 tint = iconColor,
                 modifier = Modifier.size(24.dp)
             )
-
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -761,23 +635,6 @@ fun ActionCard(
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
-
-                if (count != null) {
-                    Box(
-                        modifier = Modifier
-                            .size(20.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = count.toString(),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
             }
         }
     }

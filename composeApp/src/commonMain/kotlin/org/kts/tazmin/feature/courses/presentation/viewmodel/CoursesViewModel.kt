@@ -31,18 +31,18 @@ class CoursesViewModel(
     private val searchQuery = MutableStateFlow("")
 
     init {
-        loadCourses()
+        Napier.d("CoursesViewModel init")
         setupSearch()
+
     }
 
     fun loadCourses() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
 
-            val result = getCoursesUseCase(
+            getCoursesUseCase(
                 page = 1,
-            )
-            result.fold(
+            ).fold(
                 onSuccess = { page ->
                     Napier.d("Загружено ${page.courses.size} курсов")
                     _state.update {
@@ -56,7 +56,7 @@ class CoursesViewModel(
                     }
                 },
                 onFailure = { throwable ->
-                    Napier.e("Ошибка", throwable)
+                    Napier.e("Ошибка загрузки курсов", throwable)
                     _state.update {
                         it.copy(
                             isLoading = false,

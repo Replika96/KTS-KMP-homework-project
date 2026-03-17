@@ -1,5 +1,6 @@
 package org.kts.tazmin.feature.courses.presentation.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,6 +36,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,7 +54,7 @@ import org.kts.tazmin.feature.courses.presentation.viewmodel.CoursesViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AllCoursesScreen(
+fun CatalogScreen(
     viewModel: CoursesViewModel = koinInject(),
     onCourseClick: (Int) -> Unit = {}
 ) {
@@ -59,6 +62,11 @@ fun AllCoursesScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
+    LaunchedEffect(viewModel) {
+        if (state.courses.isEmpty() && !state.isLoading) {
+            viewModel.handleEvent(CoursesUiEvent.LoadCourses)
+        }
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -93,65 +101,104 @@ fun AllCoursesScreen(
                 singleLine = true
             )
 
-            val coursesToShow =
-                if (state.searchQuery.isBlank())
-                    state.courses
-                else
-                    state.searchResults
-
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.fillMaxSize()
-            ) {
-
-                itemsIndexed(
-                    items = coursesToShow,
-                    key = { _, course -> course.id }
-                ) { index, course ->
-
-                    CourseCatalogItem(
-                        course = course,
-                        onClick = { onCourseClick(course.id) }
-                    )
-
-                    // Pagination
-                    if (state.searchQuery.isBlank() &&
-                        index >= coursesToShow.lastIndex - 1
+            when {
+                state.isLoading && state.courses.isEmpty() -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
                     ) {
-                        LaunchedEffect(index) {
-                            viewModel.handleEvent(
-                                CoursesUiEvent.LoadMoreCourses
-                            )
-                        }
+                        CircularProgressIndicator()
                     }
                 }
 
-                // Pagination loader
-                if (state.isLoadingMore) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
-                    }
+                state.coursesError != null -> {
+                    ErrorView(
+                        error = state.coursesError!!,
+                        onReload = { viewModel.handleEvent(CoursesUiEvent.LoadCourses) }
+                    )
                 }
 
-                // Search loader
-                if (state.isSearching) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                else -> {
+                    val coursesToShow = if (state.searchQuery.isNotBlank()) {
+                        state.searchResults
+                    } else {
+                        state.courses
+                    }
+
+                    LazyColumn(
+                        state = listState,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        // показываем сообщение если нет курсов
+                        if (coursesToShow.isEmpty() && !state.isSearching) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(32.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (state.searchQuery.isNotBlank())
+                                            "Ничего не найдено"
+                                        else
+                                            "Нет доступных курсов",
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                            }
+                        } else {
+                            itemsIndexed(
+                                items = coursesToShow,
+                                key = { _, course -> course.id }
+                            ) { index, course ->
+                                CourseCatalogItem(
+                                    course = course,
+                                    onClick = { onCourseClick(course.id) }
+                                )
+
+                                if (!state.searchQuery.isNotBlank() &&
+                                    state.hasNext &&
+                                    index >= coursesToShow.lastIndex - 2 &&
+                                    !state.isLoadingMore &&
+                                    !state.isLoading
+                                ) {
+                                    LaunchedEffect(index) {
+                                        viewModel.handleEvent(CoursesUiEvent.LoadMoreCourses)
+                                    }
+                                }
+                            }
+                        }
+
+                        // индикатор загрузки пагинации
+                        if (state.isLoadingMore) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+                        }
+
+                        // идикатор поиска
+                        if (state.isSearching) {
+                            item {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(24.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator()
+                                }
+                            }
                         }
                     }
+
                 }
             }
         }
@@ -163,7 +210,6 @@ fun CourseCatalogItem(
     course: Course,
     onClick: () -> Unit
 ) {
-
     Card(
         onClick = onClick,
         modifier = Modifier

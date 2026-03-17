@@ -1,5 +1,7 @@
 package org.kts.tazmin.feature.auth.domain.model
 
+import org.kts.tazmin.feature.profile.domain.model.User
+
 sealed class AuthResult {
     object Success : AuthResult()
     data class SuccessWithUser(val user: User) : AuthResult()
