@@ -4,8 +4,10 @@ data class Course(
     val id: Int,
     val title: String,
     val description: String,
+    val author: String,
     val coverUrl: String?,
-    val studentsCount: Int,
     val rating: Double,
-    val author: String
+    val studentsCount: Int,
+    val isPaid: Boolean,
+    val price: String?
 )

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_title">Redcat</string>
+    <string name="app_title">Stepik</string>
     <string name="welcome_title">Добро пожаловать!</string>
 
     <string name="login_button">Войти</string>
@@ -17,6 +17,18 @@
     <string name="continue_coures">Продолжить учиться</string>
     <string name="no_active_courses">Нет активных курсов</string>
     <string name="my_active_courses">Мои курсы</string>
+    <string name="all_courses">Все курсы</string>
+    <string name="all_button">Все</string>
+    <string name="search_courses">Поиск курсов</string>
     <string name="my_reviews">Мои отзывы</string>
     <string name="wishlist">Список желаний</string>
+    <string name="students">Студентов</string>
+
+    <string name="auth_error">Ошибка авторизации</string>
+    <string name="load_error">Ошибка загрузки</string>
+    <string name="loading">Загрузка...</string>
+    <string name="retry">Повторить</string>
+
+    <string name="login_with_stepik">Войти через Stepik</string>
+    <string name="free">Бесплатно</string>
 </resources>
