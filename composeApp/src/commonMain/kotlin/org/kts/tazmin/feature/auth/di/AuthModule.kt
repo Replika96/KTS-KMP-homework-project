@@ -49,5 +49,5 @@ val authModule = module {
 
     //ViewModel
     viewModel { OAuthViewModel(get()) }
-    viewModel { AppStartViewModel(get()) }
+    viewModel { AppStartViewModel(get(), get()) }
 }

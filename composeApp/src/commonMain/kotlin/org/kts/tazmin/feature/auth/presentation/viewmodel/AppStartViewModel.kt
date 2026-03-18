@@ -5,12 +5,16 @@ import androidx.lifecycle.viewModelScope
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.launch
 import org.kts.tazmin.core.datastore.UserPreferences
+import org.kts.tazmin.core.token.TokenStorage
 import org.kts.tazmin.navigation.Screen
 
 class AppStartViewModel(
-    private val preferences: UserPreferences
+    private val preferences: UserPreferences,
+    private val tokenStorage: TokenStorage
 ) : ViewModel() {
 
     private val _startDestination = MutableStateFlow<Screen?>(null)
@@ -18,9 +22,17 @@ class AppStartViewModel(
 
     init {
         viewModelScope.launch {
-            preferences.onboardingShown.collect { shown ->
-                _startDestination.value =
-                    if (shown) Screen.Courses else Screen.Onboarding
+            combine(
+                preferences.onboardingShown,
+                flow { emit(tokenStorage.isLoggedIn()) }
+            ) { onboardingShown, loggedIn ->
+                if (!onboardingShown) {
+                    Screen.Onboarding
+                } else {
+                    if (loggedIn) Screen.Courses else Screen.Onboarding
+                }
+            }.collect { screen ->
+                _startDestination.value = screen
             }
         }
     }
@@ -31,5 +43,4 @@ class AppStartViewModel(
             Napier.e(tag = "AppStartViewModel", message = "Onboarding пройден")
         }
     }
-
 }
