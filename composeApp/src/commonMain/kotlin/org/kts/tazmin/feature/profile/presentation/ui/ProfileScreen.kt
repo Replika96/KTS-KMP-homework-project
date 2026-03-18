@@ -51,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -229,7 +230,7 @@ fun ProfileMetaCard(
                 Icon(
                     imageVector = Icons.Default.CalendarMonth,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.tertiary
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))
@@ -261,7 +262,7 @@ fun ProfileMetaCard(
                     imageVector = if (isPrivate) Icons.Default.Lock else Icons.Default.Public,
                     contentDescription = null,
                     tint = if (isPrivate)
-                        MaterialTheme.colorScheme.tertiary
+                        MaterialTheme.colorScheme.secondary
                     else
                         MaterialTheme.colorScheme.primary
                 )
@@ -319,7 +320,7 @@ fun ProfileBioCard(bio: String) {
                 Icon(
                     imageVector = Icons.Default.Description,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
+                    tint = MaterialTheme.colorScheme.secondary
                 )
 
                 Spacer(modifier = Modifier.width(10.dp))
@@ -383,6 +384,7 @@ fun ProfileStatsCard(stats: UserStats) {
                     label = stringResource(Res.string.knowledge_label),
                     value = stats.knowledge.toString(),
                     rank = stats.knowledgeRank,
+                    iconTint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -393,6 +395,7 @@ fun ProfileStatsCard(stats: UserStats) {
                     label = stringResource(Res.string.reputation_label),
                     value = stats.reputation.toString(),
                     rank = stats.reputationRank,
+                    iconTint = MaterialTheme.colorScheme.tertiary,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -402,6 +405,7 @@ fun ProfileStatsCard(stats: UserStats) {
                     icon = Icons.Default.Group,
                     label = stringResource(Res.string.followers_label),
                     value = stats.followers.toString(),
+                    iconTint = MaterialTheme.colorScheme.secondary,
                     modifier = Modifier.weight(1f)
                 )
 
@@ -411,6 +415,7 @@ fun ProfileStatsCard(stats: UserStats) {
                     icon = Icons.Default.CheckCircle,
                     label = stringResource(Res.string.solved_steps_label),
                     value = stats.solvedSteps.toString(),
+                    iconTint = MaterialTheme.colorScheme.primary.copy(alpha = 0.8f),
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -425,6 +430,7 @@ private fun StatItem(
     label: String,
     value: String,
     rank: Int? = null,
+    iconTint: Color = MaterialTheme.colorScheme.primary,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -435,7 +441,7 @@ private fun StatItem(
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
+            tint = iconTint,
             modifier = Modifier.size(28.dp)
         )
 
@@ -484,7 +490,7 @@ fun ProfileHeaderSection(
                 Brush.verticalGradient(
                     colors = listOf(
                         MaterialTheme.colorScheme.primary,
-                        MaterialTheme.colorScheme.primaryContainer
+                        MaterialTheme.colorScheme.tertiaryContainer
                     )
                 )
             )
@@ -650,7 +656,7 @@ fun ProfileLoadingView() {
                         Brush.verticalGradient(
                             colors = listOf(
                                 MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                                MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.3f) // Обновили цвет
                             )
                         )
                     )
@@ -722,12 +728,11 @@ fun ProfileLoadingView() {
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Icon skeleton
                         Box(
                             modifier = Modifier
                                 .size(24.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha * 0.5f))
+                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = alpha * 0.5f))
                         )
 
                         Spacer(modifier = Modifier.width(10.dp))
@@ -790,7 +795,15 @@ fun ProfileLoadingView() {
                         horizontalArrangement = Arrangement.Center,
                     ) {
                         repeat(4) { index ->
-                            StatItemSkeleton(alpha = alpha)
+                            StatItemSkeleton(
+                                alpha = alpha,
+                                iconColor = when(index) {
+                                    0 -> MaterialTheme.colorScheme.primary
+                                    1 -> MaterialTheme.colorScheme.tertiary
+                                    2 -> MaterialTheme.colorScheme.secondary
+                                    else -> MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                }
+                            )
 
                             if (index < 3) {
                                 VerticalDivider(
@@ -838,7 +851,7 @@ fun ProfileLoadingView() {
                             modifier = Modifier
                                 .size(24.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha * 0.5f))
+                                .background(MaterialTheme.colorScheme.tertiary.copy(alpha = alpha * 0.5f))
                         )
 
                         Spacer(modifier = Modifier.width(12.dp))
@@ -874,7 +887,7 @@ fun ProfileLoadingView() {
                             modifier = Modifier
                                 .size(24.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha * 0.5f))
+                                .background(MaterialTheme.colorScheme.secondary.copy(alpha = alpha * 0.5f))
                         )
 
                         Spacer(modifier = Modifier.width(12.dp))
@@ -906,7 +919,10 @@ fun ProfileLoadingView() {
 }
 
 @Composable
-private fun StatItemSkeleton(alpha: Float) {
+private fun StatItemSkeleton(
+    alpha: Float,
+    iconColor: Color = MaterialTheme.colorScheme.primary
+) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -915,7 +931,7 @@ private fun StatItemSkeleton(alpha: Float) {
             modifier = Modifier
                 .size(28.dp)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = alpha * 0.5f))
+                .background(iconColor.copy(alpha = alpha * 0.5f))
         )
 
         Spacer(modifier = Modifier.height(4.dp))

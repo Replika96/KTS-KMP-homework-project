@@ -12,7 +12,9 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.kts.tazmin.core.common.Resource
 import org.kts.tazmin.core.common.Source
+import org.kts.tazmin.feature.courses.data.model.CoursesPage
 import org.kts.tazmin.feature.courses.domain.usecase.GetCoursesUseCase
 import org.kts.tazmin.feature.courses.domain.usecase.SearchCoursesUseCase
 import org.kts.tazmin.feature.courses.presentation.state.CoursesResult
@@ -32,93 +34,121 @@ class CoursesViewModel(
     val searchState: StateFlow<SearchUiState> = _searchState.asStateFlow()
 
     private val searchQuery = MutableStateFlow("")
+
+    private var catalogJob: Job? = null
     private var searchJob: Job? = null
+    private var loadMoreCatalogJob: Job? = null
+    private var loadMoreSearchJob: Job? = null
 
     init {
-        Napier.d("CoursesViewModel init")
+        observeCourses()
         observeSearchQuery()
     }
 
-    fun loadCourses() {
-        viewModelScope.launch {
-            _state.update { it.copy(isLoading = true) }
-            // у степика странно, что курсы грузят иногда то только на второй странице, то ток на первой
-            // https://stepik.org/api/courses?page=2
-            when (val result = getCoursesUseCase(page = 1)) {
+    // курсы
+    private fun observeCourses() {
+        catalogJob?.cancel()
 
-                is CoursesResult.Success -> {
-                    handleSuccessResult(result)
-                }
+        catalogJob = viewModelScope.launch {
+            getCoursesUseCase(page = 1, pageSize = 20)
+                .collect { resource ->
+                    when (resource) {
+                        is Resource.Loading -> {
+                            _state.update {
+                                it.copy(
+                                    isLoading = true,
+                                    coursesError = null,
+                                    cachedInfoMessage = null
+                                )
+                            }
+                        }
 
-                is CoursesResult.Error -> {
-                    handleErrorResult(result)
+                        is Resource.Success -> {
+                            handleCoursesSuccess(
+                                page = resource.data,
+                                source = resource.source,
+                                isFirstPage = true
+                            )
+                        }
+
+                        is Resource.Error -> {
+                            handleCoursesError(
+                                message = resource.message,
+                                cachedData = resource.data
+                            )
+                        }
+                    }
                 }
-            }
         }
     }
 
-    private fun handleSuccessResult(result: CoursesResult.Success) {
-        val page = result.data
-        val isFromCache = result.source == Source.CACHE
+    private fun handleCoursesSuccess(
+        page: CoursesPage,
+        source: Source,
+        isFirstPage: Boolean
+    ) {
+        val isFromCache = source == Source.CACHE
 
-        Napier.d("Загружено ${page.courses.size} курсов (cache=$isFromCache)")
+        val shouldShowBanner = isFromCache && (
+                !isFirstPage || // это подгрузка следующих страниц
+                        _state.value.courses.isNotEmpty() // уже были данные
+                )
 
-        _state.update {
-            it.copy(
-                courses = page.courses,
+        Napier.d("Каталог: загружено ${page.courses.size} курсов (cache=$isFromCache, page=${page.page})")
+
+        _state.update { current ->
+            current.copy(
+                courses = if (isFirstPage) page.courses else current.courses + page.courses,
                 page = page.page,
                 hasNext = page.hasNext,
                 isLoading = false,
                 isLoadingMore = false,
+                isRefreshing = false,
                 isFromCache = isFromCache,
                 cachedInfoMessage = if (isFromCache) "Показаны сохранённые данные" else null,
-                coursesError = null  // Ошибки нет
+                coursesError = null,
+                showCachedBanner = shouldShowBanner,
             )
         }
     }
 
-    private fun handleErrorResult(result: CoursesResult.Error) {
-        Napier.e("Ошибка загрузки курсов: ${result.message}")
+    private fun handleCoursesError(
+        message: String,
+        cachedData: CoursesPage?
+    ) {
+        Napier.e("Каталог: ошибка загрузки курсов: $message")
 
-        if (result.hasCachedData) {
-            // есть кэш и показываем его с сообщением об ошибке
-            val cachedPage = result.cachedData!!
+        if (cachedData != null) {
             _state.update {
                 it.copy(
-                    courses = cachedPage.courses,
-                    page = cachedPage.page,
-                    hasNext = cachedPage.hasNext,
+                    courses = cachedData.courses,
+                    page = cachedData.page,
+                    hasNext = cachedData.hasNext,
                     isLoading = false,
                     isLoadingMore = false,
+                    isRefreshing = false,
+                    showCachedBanner = true,
                     isFromCache = true,
                     cachedInfoMessage = "Показаны сохранённые данные",
-                    coursesError = result.message  // Ошибка для банера
+                    coursesError = message
                 )
             }
         } else {
-            // нет кэша и только ошибка
             _state.update {
                 it.copy(
+                    courses = emptyList(),
                     isLoading = false,
                     isLoadingMore = false,
+                    isRefreshing = false,
                     isFromCache = false,
-                    coursesError = result.message,
-                    courses = emptyList()
+                    cachedInfoMessage = null,
+                    coursesError = message
                 )
             }
         }
     }
 
-    fun handleEvent(event: CoursesUiEvent) {
-        when (event) {
-            is CoursesUiEvent.LoadCourses -> loadCourses()
-            is CoursesUiEvent.LoadMoreCourses -> loadMoreCourses()
-            is CoursesUiEvent.RefreshCourses -> refreshCourses()
-            is CoursesUiEvent.SearchQueryChanged -> onSearchQueryChanged(event.query)
-            CoursesUiEvent.ClearSearch -> clearSearch()
-        }
-    }
-
+    // поиск
     @OptIn(FlowPreview::class)
     private fun observeSearchQuery() {
         searchJob?.cancel()
@@ -128,53 +158,160 @@ class CoursesViewModel(
                 .debounce(300)
                 .distinctUntilChanged()
                 .collect { query ->
-                    if (query.length >= 2) {
-                        performSearch(query)
-                    } else if (query.isBlank()) {
-                        clearSearch()
+                    when {
+                        query.length >= 2 -> {
+                            startSearch(query)
+                        }
+
+                        query.isBlank() -> {
+                            clearSearchInternal()
+                        }
+
+                        else -> {
+                            _searchState.update {
+                                it.copy(
+                                    results = emptyList(),
+                                    isSearching = false,
+                                    error = null,
+                                    cachedInfoMessage = null,
+                                    isFromCache = false
+                                )
+                            }
+                        }
                     }
                 }
         }
     }
 
-    private suspend fun performSearch(query: String) {
-        _searchState.update { it.copy(isSearching = true, query = query, error = null) }
+    private fun startSearch(query: String) {
+        // сбрасываем состояние
+        _searchState.update {
+            it.copy(
+                query = query,
+                currentPage = 1,
+                results = emptyList(),
+                isSearching = true,
+                isLoadingMore = false,
+                error = null,
+                cachedInfoMessage = null,
+                isFromCache = false
+            )
+        }
 
-        when (val result = searchCoursesUseCase(query, page = 1)) {
-            is CoursesResult.Success -> {
-                _searchState.update {
-                    it.copy(
-                        results = result.data.courses,
-                        isSearching = false,
-                        isFromCache = result.source == Source.CACHE,
-                        cachedInfoMessage = if (result.source == Source.CACHE)
-                            "Показаны сохранённые данные" else null,
-                        error = null
+        loadMoreSearchJob?.cancel()
+
+        loadMoreSearchJob = viewModelScope.launch {
+            when (val result = searchCoursesUseCase(query, page = 1)) {
+                is CoursesResult.Success -> {
+                    handleSearchSuccess(
+                        page = result.data,
+                        source = result.source,
+                        isFirstPage = true
                     )
                 }
-            }
 
-            is CoursesResult.Error -> {
-                if (result.hasCachedData) {
-                    val cachedPage = result.cachedData!!
-                    _searchState.update {
-                        it.copy(
-                            results = cachedPage.courses,
-                            isSearching = false,
-                            isFromCache = true,
-                            cachedInfoMessage = "Показаны сохранённые данные",
-                            error = result.message
-                        )
-                    }
-                } else {
-                    _searchState.update {
-                        it.copy(
-                            error = result.message,
-                            isSearching = false,
-                            isFromCache = false,
-                            results = emptyList()
-                        )
-                    }
+                is CoursesResult.Error -> {
+                    handleSearchError(result)
+                }
+            }
+        }
+    }
+
+
+    private fun handleSearchSuccess(
+        page: CoursesPage,
+        source: Source,
+        isFirstPage: Boolean
+    ) {
+        val isFromCache = source == Source.CACHE
+
+        val shouldShowBanner = isFromCache && (
+                !isFirstPage ||
+                        _searchState.value.results.isNotEmpty()
+                )
+        Napier.d("Поиск: загружено ${page.courses.size} курсов (cache=$isFromCache, page=${page.page})")
+
+        _searchState.update { current ->
+            current.copy(
+                results = if (isFirstPage) page.courses else current.results + page.courses,
+                currentPage = page.page,
+                hasNext = page.hasNext,
+                isSearching = false,
+                isLoadingMore = false,
+                showCachedBanner = shouldShowBanner,
+                isFromCache = isFromCache,
+                cachedInfoMessage = if (isFromCache) "Показаны сохранённые данные" else null,
+                error = null
+            )
+        }
+    }
+
+    private fun handleSearchError(result: CoursesResult.Error) {
+        Napier.e("Поиск: ошибка: ${result.message}")
+
+        if (result.hasCachedData) {
+            val cachedPage = result.cachedData!!
+            _searchState.update { current ->
+                current.copy(
+                    results = if (cachedPage.page == 1)
+                        cachedPage.courses
+                    else
+                        current.results + cachedPage.courses,
+                    currentPage = cachedPage.page,
+                    hasNext = cachedPage.hasNext,
+                    isSearching = false,
+                    isLoadingMore = false,
+                    isFromCache = true,
+                    showCachedBanner = true,
+                    cachedInfoMessage = "Показаны сохранённые данные",
+                    error = result.message
+                )
+            }
+        } else {
+            _searchState.update { current ->
+                current.copy(
+                    error = result.message,
+                    isSearching = false,
+                    isLoadingMore = false,
+                    isFromCache = false,
+                    cachedInfoMessage = null,
+                    results = if (current.currentPage == 1) emptyList() else current.results
+                )
+            }
+        }
+    }
+
+    // event
+    fun handleEvent(event: CoursesUiEvent) {
+        when (event) {
+            is CoursesUiEvent.LoadCourses -> reloadCatalog()
+            is CoursesUiEvent.LoadMoreCourses -> loadMoreCatalog()
+            is CoursesUiEvent.RefreshCourses -> refreshCatalog()
+            is CoursesUiEvent.SearchQueryChanged -> onSearchQueryChanged(event.query)
+            is CoursesUiEvent.LoadMoreSearchResults -> loadMoreSearchResults()
+            CoursesUiEvent.ClearSearch -> clearSearch()
+        }
+    }
+
+    private fun reloadCatalog() {
+        observeCourses()
+    }
+
+    private fun refreshCatalog() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshing = true, coursesError = null) }
+
+            when (val result = getCoursesUseCase.forceRefresh(page = 1, pageSize = 20)) {
+                is CoursesResult.Success -> {
+                    handleCoursesSuccess(
+                        page = result.data,
+                        source = result.source,
+                        isFirstPage = true
+                    )
+                }
+
+                is CoursesResult.Error -> {
+                    handleCoursesError(result.message, result.cachedData)
                 }
             }
         }
@@ -182,115 +319,98 @@ class CoursesViewModel(
 
     private fun onSearchQueryChanged(query: String) {
         _state.update { it.copy(searchQuery = query) }
-
-        if (query.isBlank()) {
-            clearSearch()
-        } else {
-            viewModelScope.launch {
-                searchQuery.emit(query)
-            }
-        }
+        searchQuery.value = query
     }
 
-    private fun clearSearch() {
+    private fun clearSearchInternal() {
         _state.update {
             it.copy(
                 searchQuery = "",
-                searchResults = emptyList(),
                 isSearching = false
             )
         }
-        loadCourses()
+        _searchState.update {
+            SearchUiState()
+        }
     }
 
-    private fun loadMoreCourses() {
+    fun clearSearch() {
+        clearSearchInternal()
+        reloadCatalog()
+    }
 
-        val currentState = _state.value
+    // пагинация
+    private fun loadMoreCatalog() {
+        val current = _state.value
 
-        if (currentState.isLoadingMore ||
-            currentState.isLoading ||
-            !currentState.hasNext ||
-            currentState.searchQuery.isNotBlank()
-        ) {
-            return
-        }
+        if (current.isLoadingMore ||
+            current.isLoading ||
+            current.isRefreshing ||
+            !current.hasNext ||
+            current.searchQuery.isNotBlank()
+        ) return
 
-        viewModelScope.launch {
+        loadMoreCatalogJob?.cancel()
 
-            _state.update { it.copy(isLoadingMore = true) }
+        _state.update { it.copy(isLoadingMore = true, coursesError = null) }
 
-            val nextPage = currentState.page + 1
+        loadMoreCatalogJob = viewModelScope.launch {
+            getCoursesUseCase(page = current.page + 1, pageSize = 20)
+                .collect { resource ->
+                    when (resource) {
+                        is Resource.Loading -> Unit
+                        is Resource.Success -> {
+                            handleCoursesSuccess(
+                                page = resource.data,
+                                source = resource.source,
+                                isFirstPage = false
+                            )
+                        }
 
-            when (val result = getCoursesUseCase(page = nextPage)) {
-
-                is CoursesResult.Success -> {
-                    val response = result.data
-
-                    _state.update {
-                        it.copy(
-                            courses = it.courses + response.courses,
-                            page = response.page,
-                            hasNext = response.hasNext,
-                            isLoadingMore = false
-                        )
+                        is Resource.Error -> {
+                            _state.update {
+                                it.copy(
+                                    isLoadingMore = false,
+                                    coursesError = resource.message
+                                )
+                            }
+                        }
                     }
+                }
+        }
+    }
+
+    fun loadMoreSearchResults() {
+        val current = _searchState.value
+
+        if (current.isLoadingMore ||
+            current.isSearching ||
+            !current.hasNext ||
+            current.query.length < 2
+        ) return
+
+        loadMoreSearchJob?.cancel()
+
+        _searchState.update { it.copy(isLoadingMore = true, error = null) }
+
+        loadMoreSearchJob = viewModelScope.launch {
+            when (val result = searchCoursesUseCase(current.query, current.currentPage + 1)) {
+                is CoursesResult.Success -> {
+                    handleSearchSuccess(
+                        page = result.data,
+                        source = result.source,
+                        isFirstPage = false
+                    )
                 }
 
                 is CoursesResult.Error -> {
-
-                    Napier.e("Ошибка загрузки следующей страницы: ${result.message}")
-
-                    _state.update {
-                        it.copy(
-                            isLoadingMore = false,
-                            coursesError = result.message
-                        )
-                    }
+                    handleSearchError(result)
                 }
             }
         }
     }
 
-    private fun refreshCourses() {
-        viewModelScope.launch {
-
-            _state.update {
-                it.copy(
-                    isLoading = true,
-                    page = 2,
-                    coursesError = null
-                )
-            }
-
-            when (val result = getCoursesUseCase(page = 2)) {
-
-                is CoursesResult.Success -> {
-                    val page = result.data
-
-                    _state.update {
-                        it.copy(
-                            courses = page.courses,
-                            page = page.page,
-                            hasNext = page.hasNext,
-                            isLoading = false
-                        )
-                    }
-                }
-
-                is CoursesResult.Error -> {
-
-                    Napier.e("Ошибка обновления: ${result.message}")
-
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            coursesError = result.message
-                        )
-                    }
-                }
-            }
-        }
-    }
+    // ошибки
     fun clearError() {
         _state.update { it.copy(coursesError = null) }
     }
@@ -299,3 +419,4 @@ class CoursesViewModel(
         _searchState.update { it.copy(error = null) }
     }
 }
+

@@ -74,10 +74,13 @@ kotlin {
             //datastore
             implementation(libs.androidx.datastore.preferences)
             implementation(libs.androidx.datastore.preferences.core)
+            implementation(libs.security.crypto.datastore.preferences)
+            implementation(libs.androidx.security.crypto)
             //room
-            implementation("androidx.room:room-runtime:2.8.4")
-            implementation("androidx.room:room-ktx:2.8.4")
-
+            implementation(libs.androidx.room.runtime)
+            implementation(libs.androidx.room.ktx)
+            // kvault
+            implementation("com.liftric:kvault:1.12.0")
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)

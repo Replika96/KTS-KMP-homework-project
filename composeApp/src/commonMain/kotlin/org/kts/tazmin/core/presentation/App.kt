@@ -71,9 +71,9 @@ fun App(
                         SplashScreen()
 
                         LaunchedEffect(startDestination) {
-                            startDestination?.let{
+                            startDestination?.let{ destination ->
                                 delay(300)
-                                navController.navigate(startDestination!!) {
+                                navController.navigate(destination) {
                                     popUpTo<Screen.Splash> {
                                         inclusive = true
                                     }

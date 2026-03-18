@@ -48,11 +48,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -97,16 +93,6 @@ fun CoursesScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
-    var isRefreshing by remember { mutableStateOf(false) }
-
-    LaunchedEffect(viewModel) {
-        viewModel.loadCourses()
-    }
-
-    LaunchedEffect(state.isLoading) {
-        isRefreshing = state.isLoading
-    }
-
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -149,20 +135,19 @@ fun CoursesScreen(
                 CoursesLoading(paddingValues)
             }
 
-            // Ошибка
+            // Ошибка и нет данных
             !state.coursesError.isNullOrBlank() && state.courses.isEmpty() -> {
                 ErrorView(
                     error = state.coursesError ?: stringResource(Res.string.unknown_error),
                     onReload = { viewModel.handleEvent(CoursesUiEvent.LoadCourses) }
                 )
             }
-            // успех
+
+            // Успех или есть кэш/данные
             else -> {
                 PullToRefreshBox(
-                    isRefreshing = isRefreshing,
-                    onRefresh = {
-                        viewModel.handleEvent(CoursesUiEvent.RefreshCourses)
-                    },
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = { viewModel.handleEvent(CoursesUiEvent.RefreshCourses) },
                     modifier = Modifier.fillMaxSize()
                 ) {
                     CoursesContent(
@@ -191,6 +176,7 @@ fun CoursesContent(
     onWishlistClick: () -> Unit
 ) {
     val mainScreenCourses = courses.take(2)
+
     LazyColumn(
         state = listState,
         modifier = Modifier
@@ -225,6 +211,7 @@ fun CoursesContent(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
             )
         }
+
         // Bottom cards
         item {
             ActionCards(

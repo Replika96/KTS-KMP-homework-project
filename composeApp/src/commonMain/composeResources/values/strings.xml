@@ -4,7 +4,11 @@
     <string name="welcome_title">Добро пожаловать!</string>
 
     <string name="close">Закрыть</string>
-
+    <string name="search_hint">Поиск курсов...</string>
+    <string name="clear">Очистить</string>
+    <string name="load_more">Загрузить еще</string>
+    <string name="no_results">Ничего не найдено по запросу </string>
+    <string name="cached_data_message">Показаны сохраненные данные</string>
     <string name="login_button">Войти</string>
     <string name="login_title">Вход</string>
     <string name="login_label">Логин</string>

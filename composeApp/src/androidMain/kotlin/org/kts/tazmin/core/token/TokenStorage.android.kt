@@ -1,21 +1,24 @@
 package org.kts.tazmin.core.token
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.longPreferencesKey
-import androidx.datastore.preferences.core.stringPreferencesKey
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import android.content.Context
+import com.liftric.kvault.KVault
 import kotlin.time.Clock
 
-actual class TokenStorage actual constructor(
-    private val dataStore: DataStore<Preferences>
+actual class TokenStorage(
+    context: Context
 ) {
-    companion object TokenKeys {
-        val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
-        val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
-        val EXPIRES_AT_KEY = longPreferencesKey("expires_at")
+
+    private val vault = KVault(
+        context = context.applicationContext,
+        fileName = "auth_tokens"
+    )
+
+    companion object {
+        private const val ACCESS_TOKEN_KEY = "access_token"
+        private const val REFRESH_TOKEN_KEY = "refresh_token"
+        private const val EXPIRES_AT_KEY = "expires_at"
+
+        private const val EXPIRATION_BUFFER_MS = 10_000L
     }
 
     actual suspend fun saveTokens(
@@ -23,42 +26,40 @@ actual class TokenStorage actual constructor(
         refreshToken: String,
         expiresIn: Long
     ) {
-        dataStore.edit { prefs ->
-            prefs[ACCESS_TOKEN_KEY] = accessToken
-            prefs[REFRESH_TOKEN_KEY] = refreshToken
-            prefs[EXPIRES_AT_KEY] = Clock.System.now().toEpochMilliseconds() + expiresIn * 1000
-        }
+        val expiresAt =
+            Clock.System.now().toEpochMilliseconds() + expiresIn * 1000
+
+        vault.set(key = ACCESS_TOKEN_KEY, stringValue = accessToken)
+        vault.set(key = REFRESH_TOKEN_KEY, stringValue = refreshToken)
+        vault.set(key = EXPIRES_AT_KEY, longValue = expiresAt)
     }
 
-    private var cachedToken: String? = null
     actual suspend fun getAccessToken(): String? {
-        if (cachedToken != null) return cachedToken
-
-        cachedToken = dataStore.data.first()[ACCESS_TOKEN_KEY]
-        return cachedToken
+        return vault.string(forKey = ACCESS_TOKEN_KEY)
     }
 
     actual suspend fun getRefreshToken(): String? {
-        cachedToken = null
-        return dataStore.data.first()[REFRESH_TOKEN_KEY]
+        return vault.string(forKey = REFRESH_TOKEN_KEY)
     }
 
     actual suspend fun getExpiresAt(): Long? {
-        return dataStore.data.map { prefs ->
-            prefs[EXPIRES_AT_KEY]
-        }.first()
+        return vault.long(forKey = EXPIRES_AT_KEY)
     }
 
     actual suspend fun isTokenExpired(): Boolean {
         val expiresAt = getExpiresAt() ?: return true
-        return Clock.System.now().toEpochMilliseconds() >= expiresAt
+        val now = Clock.System.now().toEpochMilliseconds()
+        return now >= expiresAt - EXPIRATION_BUFFER_MS
     }
 
     actual suspend fun clear() {
-        dataStore.edit { it.clear() }
+        vault.deleteObject(forKey = ACCESS_TOKEN_KEY)
+        vault.deleteObject(forKey = REFRESH_TOKEN_KEY)
+        vault.deleteObject(forKey = EXPIRES_AT_KEY)
     }
 
     actual suspend fun isLoggedIn(): Boolean {
-        return getAccessToken() != null
+        val access = getAccessToken() ?: return false
+        return !isTokenExpired()
     }
 }

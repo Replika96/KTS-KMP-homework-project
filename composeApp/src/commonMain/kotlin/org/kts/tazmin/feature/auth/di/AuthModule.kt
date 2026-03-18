@@ -5,7 +5,6 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import org.kts.tazmin.core.datastore.UserPreferences
 import org.kts.tazmin.core.network.HttpClientFactory
-import org.kts.tazmin.core.token.TokenStorage
 import org.kts.tazmin.feature.auth.data.network.api.AuthApi
 import org.kts.tazmin.feature.auth.data.repository.AuthRepositoryImpl
 import org.kts.tazmin.feature.auth.domain.repository.AuthRepository
@@ -16,8 +15,6 @@ import org.kts.tazmin.feature.profile.data.repository.ProfileRepositoryImpl
 import org.kts.tazmin.feature.profile.domain.repository.ProfileRepository
 
 val authModule = module {
-
-    single<TokenStorage> { TokenStorage(get()) }
 
     single { HttpClientFactory(tokenStorage = get()) }
 

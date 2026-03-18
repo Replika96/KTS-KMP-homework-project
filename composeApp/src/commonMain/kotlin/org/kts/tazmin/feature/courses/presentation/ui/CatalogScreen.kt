@@ -43,9 +43,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import kotlinx.coroutines.flow.distinctUntilChanged
 import ktskotlinproject.composeapp.generated.resources.Res
 import ktskotlinproject.composeapp.generated.resources.all_courses
 import ktskotlinproject.composeapp.generated.resources.free
@@ -72,13 +71,10 @@ fun CatalogScreen(
     viewModel: CoursesViewModel = koinInject(),
     onCourseClick: (Int) -> Unit = {}
 ) {
-
     val state by viewModel.state.collectAsStateWithLifecycle()
     val searchState by viewModel.searchState.collectAsStateWithLifecycle()
 
     val listState = rememberLazyListState()
-
-    var isRefreshing by remember { mutableStateOf(false) }
 
     LaunchedEffect(viewModel) {
         if (state.courses.isEmpty() && !state.isLoading) {
@@ -86,40 +82,28 @@ fun CatalogScreen(
         }
     }
 
-    LaunchedEffect(state.isLoading) {
-        isRefreshing = state.isLoading
-    }
-
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(stringResource(Res.string.all_courses))
-                }
+                title = { Text(stringResource(Res.string.all_courses)) }
             )
         }
     ) { padding ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
-
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = {
-                    viewModel.handleEvent(
-                        CoursesUiEvent.SearchQueryChanged(it)
-                    )
+                    viewModel.handleEvent(CoursesUiEvent.SearchQueryChanged(it))
                 },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
                 placeholder = { Text(stringResource(Res.string.search_courses)) },
-                leadingIcon = {
-                    Icon(Icons.Default.Search, null)
-                },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 singleLine = true,
                 isError = searchState.error != null && state.searchQuery.isNotBlank()
             )
@@ -139,20 +123,19 @@ fun CatalogScreen(
             val error = if (isSearchActive) searchState.error else state.coursesError
 
             when {
-                // Загрузка
+                // начальная загрузка
                 isLoading && items.isEmpty() -> {
                     CatalogLoadingView()
                 }
 
-                // Ошибка и нет данных
+                // ошибка и нет данных (не из кэша)
                 error != null && items.isEmpty() && !state.isFromCache && !searchState.isFromCache -> {
                     ErrorView(
                         error = error,
                         onReload = {
                             if (isSearchActive) {
-                                viewModel.handleEvent(
-                                    CoursesUiEvent.SearchQueryChanged(state.searchQuery)
-                                )
+                                // повторный поиск
+                                viewModel.handleEvent(CoursesUiEvent.SearchQueryChanged(state.searchQuery))
                             } else {
                                 viewModel.handleEvent(CoursesUiEvent.LoadCourses)
                             }
@@ -163,29 +146,23 @@ fun CatalogScreen(
                 else -> {
                     Column(modifier = Modifier.fillMaxSize()) {
 
-                        if (!isSearchActive && state.isFromCache && state.cachedInfoMessage != null) {
+                        /*if (!isSearchActive && state.showCachedBanner && state.cachedInfoMessage != null) {
                             CachedInfoBanner(message = state.cachedInfoMessage!!)
                         }
 
                         if (!isSearchActive && error != null && state.isFromCache) {
-                            ErrorBanner(
-                                message = error,
-                                onDismiss = { viewModel.clearError() }
-                            )
+                            ErrorBanner(message = error, onDismiss = { viewModel.clearError() })
                         }
 
-                        if (isSearchActive && searchState.isFromCache && searchState.cachedInfoMessage != null) {
+                        if (isSearchActive && searchState.showCachedBanner && searchState.cachedInfoMessage != null) {
                             CachedInfoBanner(message = searchState.cachedInfoMessage!!)
                         }
 
                         if (isSearchActive && error != null && searchState.isFromCache) {
-                            ErrorBanner(
-                                message = error,
-                                onDismiss = { viewModel.clearSearchError() }
-                            )
-                        }
+                            ErrorBanner(message = error, onDismiss = { viewModel.clearSearchError() })
+                        }*/
                         PullToRefreshBox(
-                            isRefreshing = isRefreshing && !isSearchActive,
+                            isRefreshing = state.isRefreshing && !isSearchActive,
                             onRefresh = {
                                 if (!isSearchActive) {
                                     viewModel.handleEvent(CoursesUiEvent.RefreshCourses)
@@ -200,26 +177,14 @@ fun CatalogScreen(
                                 itemsIndexed(
                                     items = items,
                                     key = { index, course -> "${course.id}_$index" }
-                                ) { index, course ->
+                                ) { _, course ->
                                     CourseCatalogItem(
                                         course = course,
                                         onClick = { onCourseClick(course.id) }
                                     )
-
-                                    // пагинация только для обычного списка
-                                    if (!isSearchActive &&
-                                        state.hasNext &&
-                                        index >= items.lastIndex - 2 &&
-                                        !state.isLoadingMore &&
-                                        !state.isLoading
-                                    ) {
-                                        LaunchedEffect(index) {
-                                            viewModel.handleEvent(CoursesUiEvent.LoadMoreCourses)
-                                        }
-                                    }
                                 }
 
-                                // загрузка пагинации
+                                // индикатор пагинации обычного списка
                                 if (!isSearchActive && state.isLoadingMore) {
                                     item(key = "loading_more") {
                                         Box(
@@ -233,6 +198,21 @@ fun CatalogScreen(
                                     }
                                 }
 
+                                // индикатор пагинации поиска
+                                if (isSearchActive && searchState.isLoadingMore) {
+                                    item(key = "search_loading_more") {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(24.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator()
+                                        }
+                                    }
+                                }
+
+                                // индикатор начального поиска (если уже есть результаты)
                                 if (isSearchActive && searchState.isSearching && items.isNotEmpty()) {
                                     item(key = "search_loading") {
                                         Box(
@@ -246,6 +226,31 @@ fun CatalogScreen(
                                     }
                                 }
                             }
+                        }
+
+                        LaunchedEffect(listState, isSearchActive, state.hasNext, searchState.hasNext) {
+                            snapshotFlow {
+                                // индекс последнего видимого элемента
+                                listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
+                            }
+                                .distinctUntilChanged()
+                                .collect { lastVisibleIndex ->
+                                    val lastIndex = items.lastIndex
+                                    if (lastVisibleIndex != null && lastIndex >= 0) {
+                                        val shouldLoadMore = lastVisibleIndex >= lastIndex - 2
+                                        if (shouldLoadMore) {
+                                            if (!isSearchActive) {
+                                                if (state.hasNext && !state.isLoadingMore && !state.isLoading && !state.isRefreshing) {
+                                                    viewModel.handleEvent(CoursesUiEvent.LoadMoreCourses)
+                                                }
+                                            } else {
+                                                if (searchState.hasNext && !searchState.isLoadingMore && !searchState.isSearching) {
+                                                    viewModel.handleEvent(CoursesUiEvent.LoadMoreSearchResults)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                         }
                     }
                 }
@@ -289,6 +294,7 @@ fun CachedInfoBanner(
         }
     }
 }
+
 
 @Composable
 fun ErrorBanner(

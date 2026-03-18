@@ -23,12 +23,12 @@ class ProfileRepositoryImpl(
     override fun getCurrentUser(): Flow<Resource<User>> = flow {
 
         // сначала пробуем кэш
-        val cached = userDao.getUser()
+        val cachedUser = userDao.getUser()
 
-        if (cached != null) {
+        if (cachedUser != null) {
             emit(
                 Resource.Success(
-                    data = cached.toDomain(),
+                    data = cachedUser.toDomain(),
                     source = Source.CACHE
                 )
             )
@@ -61,11 +61,11 @@ class ProfileRepositoryImpl(
             Napier.e("getCurrentUser error", e)
 
             // если есть кэш просто ошибка поверх него
-            if (cached != null) {
+            if (cachedUser != null) {
                 emit(
                     Resource.Error(
                         message = "Не удалось обновить данные",
-                        data = cached.toDomain()
+                        data = cachedUser.toDomain()
                     )
                 )
             } else {

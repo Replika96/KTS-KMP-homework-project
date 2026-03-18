@@ -1,4 +1,7 @@
 package org.kts.tazmin.core.token
+
+import androidx.datastore.preferences.core.Preferences
+
 //надо разобраться
 actual class TokenStorage {
 
@@ -14,16 +17,20 @@ actual class TokenStorage {
         this.refreshToken = refreshToken
     }
 
-    actual suspend fun getAccessToken(): String? {
-        return accessToken
-    }
-
-    actual suspend fun getRefreshToken(): String? {
-        return refreshToken
-    }
-
     actual suspend fun clear() {
         accessToken = null
         refreshToken = null
+    }
+
+    actual suspend fun <T> getToken(key: Preferences.Key<T>): T? {
+
+    }
+
+    actual suspend fun isTokenExpired(): Boolean {
+
+    }
+
+    actual suspend fun isLoggedIn(): Boolean {
+
     }
 }

@@ -10,8 +10,9 @@ import io.github.aakira.napier.DebugAntilog
 import io.github.aakira.napier.Napier
 import org.koin.android.ext.koin.androidContext
 import org.koin.compose.KoinApplication
-import org.kts.tazmin.core.datastore.initDataStore
-import org.kts.tazmin.core.di.androidModule
+import org.kts.tazmin.core.di.dataModule
+import org.kts.tazmin.core.di.databaseModule
+import org.kts.tazmin.core.di.securityModule
 import org.kts.tazmin.core.presentation.App
 import org.kts.tazmin.feature.auth.di.authModule
 import org.kts.tazmin.feature.courses.di.coursesModule
@@ -22,13 +23,15 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
         Napier.base(DebugAntilog())
-        initDataStore(this)
+
         setContent {
             KoinApplication(
                 application = {
                     androidContext(this@MainActivity)
                     modules(
-                        androidModule,
+                        databaseModule,
+                        dataModule,
+                        securityModule,
                         authModule,
                         coursesModule,
                         profileModule

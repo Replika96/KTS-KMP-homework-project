@@ -1,11 +1,6 @@
 package org.kts.tazmin.core.token
 
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-
-expect class TokenStorage(
-    dataStore: DataStore<Preferences>
-) {
+expect class TokenStorage {
     suspend fun saveTokens(
         accessToken: String,
         refreshToken: String,
@@ -13,11 +8,8 @@ expect class TokenStorage(
     )
 
     suspend fun getAccessToken(): String?
-
     suspend fun getRefreshToken(): String?
-
     suspend fun getExpiresAt(): Long?
-
     suspend fun isTokenExpired(): Boolean
     suspend fun clear()
 

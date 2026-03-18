@@ -13,6 +13,8 @@ data class CoursesUiState(
     val searchQuery: String = "",
     val isSearching: Boolean = false,
     val searchResults: List<Course> = emptyList(),
-    val cachedInfoMessage: String? = null
+    val cachedInfoMessage: String? = null,
+    val isRefreshing: Boolean = false,
+    val showCachedBanner: Boolean = false
 )
 
