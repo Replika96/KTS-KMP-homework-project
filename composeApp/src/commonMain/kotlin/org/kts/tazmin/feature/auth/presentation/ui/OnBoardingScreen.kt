@@ -63,7 +63,6 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 import org.kts.tazmin.feature.auth.presentation.viewmodel.OAuthViewModel
 import org.kts.tazmin.theme.CatTheme

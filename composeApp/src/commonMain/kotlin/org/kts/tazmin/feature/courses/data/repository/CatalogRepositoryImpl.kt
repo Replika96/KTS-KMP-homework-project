@@ -1,15 +1,12 @@
 package org.kts.tazmin.feature.courses.data.repository
 
 import io.github.aakira.napier.Napier
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onStart
 import org.kts.tazmin.core.common.Resource
 import org.kts.tazmin.core.common.Source
 import org.kts.tazmin.feature.courses.data.local.CatalogDao

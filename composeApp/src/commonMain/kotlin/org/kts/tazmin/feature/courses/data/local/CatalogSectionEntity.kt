@@ -2,7 +2,6 @@ package org.kts.tazmin.feature.courses.data.local
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
-import kotlin.time.Clock
 
 @Entity(tableName = "catalog_sections")
 data class CatalogSectionEntity(
