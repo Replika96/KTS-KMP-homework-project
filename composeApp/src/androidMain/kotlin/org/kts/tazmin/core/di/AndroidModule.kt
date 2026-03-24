@@ -45,6 +45,8 @@ val databaseModule = module {
 
     single { get<AppDatabase>().userDao() }
     single { get<AppDatabase>().courseDao() }
+    single { get<AppDatabase>().myCoursesDao() }
+    single { get<AppDatabase>().catalogDao() }
 }
 
 const val DATA_STORE_FILE_NAME = "user.preferences_pb"

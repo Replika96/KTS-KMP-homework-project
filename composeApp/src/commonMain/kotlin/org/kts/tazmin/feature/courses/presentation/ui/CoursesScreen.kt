@@ -48,6 +48,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,28 +72,31 @@ import ktskotlinproject.composeapp.generated.resources.main_screen
 import ktskotlinproject.composeapp.generated.resources.my_active_courses
 import ktskotlinproject.composeapp.generated.resources.my_reviews
 import ktskotlinproject.composeapp.generated.resources.no_active_courses
+import ktskotlinproject.composeapp.generated.resources.points
 import ktskotlinproject.composeapp.generated.resources.retry
 import ktskotlinproject.composeapp.generated.resources.unknown_error
 import ktskotlinproject.composeapp.generated.resources.wishlist
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
 import org.kts.tazmin.feature.courses.domain.entity.Course
-import org.kts.tazmin.feature.courses.presentation.state.CoursesUiEvent
-import org.kts.tazmin.feature.courses.presentation.viewmodel.CoursesViewModel
+import org.kts.tazmin.feature.courses.presentation.viewmodel.MyCoursesViewModel
 import org.kts.tazmin.theme.CatTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CoursesScreen(
-    viewModel: CoursesViewModel = koinViewModel(),
+    catalogViewModel: MyCoursesViewModel = koinViewModel<MyCoursesViewModel>(),
     onCourseClick: (Int) -> Unit = {},
-    onCatalogClick: () -> Unit = {},
+    onMyCoursesClick: () -> Unit = {},
     onWishlistClick: () -> Unit = {},
     onReviewsClick: () -> Unit = {}
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
+    val state by catalogViewModel.state.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
+    LaunchedEffect(catalogViewModel) {
+        catalogViewModel.loadCourses()
+    }
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         topBar = {
@@ -130,31 +134,31 @@ fun CoursesScreen(
     ) { paddingValues ->
 
         when {
-            // Первичная загрузка
+            //первичная загрузка
             state.isLoading && state.courses.isEmpty() -> {
                 CoursesLoading(paddingValues)
             }
 
-            // Ошибка и нет данных
+            //ошибка и нет данных
             !state.coursesError.isNullOrBlank() && state.courses.isEmpty() -> {
                 ErrorView(
                     error = state.coursesError ?: stringResource(Res.string.unknown_error),
-                    onReload = { viewModel.handleEvent(CoursesUiEvent.LoadCourses) }
+                    onReload = { catalogViewModel.loadCourses() }
                 )
             }
 
-            // Успех или есть кэш/данные
+            //успех или есть кэш/данные
             else -> {
                 PullToRefreshBox(
                     isRefreshing = state.isRefreshing,
-                    onRefresh = { viewModel.handleEvent(CoursesUiEvent.RefreshCourses) },
+                    onRefresh = { catalogViewModel.refresh() },
                     modifier = Modifier.fillMaxSize()
                 ) {
                     CoursesContent(
                         courses = state.courses,
                         paddingValues = paddingValues,
                         listState = listState,
-                        onAllCoursesClick = onCatalogClick,
+                        onAllCoursesClick = onMyCoursesClick,
                         onCourseClick = onCourseClick,
                         onReviewsClick = onReviewsClick,
                         onWishlistClick = onWishlistClick
@@ -574,7 +578,7 @@ fun ContinueLearningCard(
                 if (course != null) {
                     Column {
                         LinearProgressIndicator(
-                            progress = { 0.45f }, // мок
+                            progress = { course.progress ?: 0f },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(6.dp)
@@ -585,13 +589,18 @@ fun ContinueLearningCard(
 
                         Spacer(modifier = Modifier.height(4.dp))
 
+                        val percent = ((course.progress ?: 0f) * 100).toInt()
+                        val score = course.score ?: 0
+                        val cost = course.cost ?: 0
+
                         Text(
-                            text = "45% • 3/7 уроков",
+                            text = "$percent% • ${score}/${cost} ${stringResource(Res.string.points)}",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
+
             }
         }
     }
@@ -723,9 +732,10 @@ fun MyCourseItem(
                     Spacer(modifier = Modifier.height(4.dp))
 
                     // Progress
+                    val percent = ((course.progress ?: 0f) * 100).toInt()
                     Column {
                         LinearProgressIndicator(
-                            progress = { 0.3f }, // mock
+                            progress = { course.progress ?: 0f },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(4.dp)
@@ -735,7 +745,7 @@ fun MyCourseItem(
                         )
 
                         Text(
-                            text = "30%",
+                            text = "$percent%",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.align(Alignment.End)

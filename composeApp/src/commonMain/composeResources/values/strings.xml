@@ -29,7 +29,7 @@
     <string name="my_reviews">Мои отзывы</string>
     <string name="wishlist">Список желаний</string>
     <string name="students">Студентов</string>
-
+    <string name="points">баллов</string>
     <string name="auth_error">Ошибка авторизации</string>
     <string name="load_error">Ошибка загрузки</string>
     <string name="unknown_error">Неизвестная ошибка</string>

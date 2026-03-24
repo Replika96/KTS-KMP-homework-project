@@ -97,7 +97,7 @@ fun App(
 
                     composable<Screen.Courses> {
                         CoursesScreen(
-                            onCatalogClick = {
+                            onMyCoursesClick = {
                                 navController.navigate(Screen.Catalog)
                             },
                             onCourseClick = { courseId ->

@@ -14,10 +14,10 @@ interface CoursesRepository {
     suspend fun searchCourses(
         query: String,
         page: Int
-    ): CoursesResult
+    ): Resource<CoursesPage>
 
     suspend fun fetchCourses(
         page: Int,
         pageSize: Int
-    ): CoursesResult
+    ): Resource<CoursesPage>
 }

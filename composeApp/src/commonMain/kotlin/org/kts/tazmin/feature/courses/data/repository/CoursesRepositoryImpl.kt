@@ -3,14 +3,15 @@ package org.kts.tazmin.feature.courses.data.repository
 import coil3.network.HttpException
 import io.github.aakira.napier.Napier
 import io.ktor.client.plugins.HttpRequestTimeoutException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.io.IOException
 import org.kts.tazmin.core.common.Resource
 import org.kts.tazmin.core.common.Source
 import org.kts.tazmin.feature.courses.data.local.CourseDao
-import org.kts.tazmin.feature.courses.data.mapper.CourseDbMapper.toDomain
-import org.kts.tazmin.feature.courses.data.mapper.CourseDbMapper.toEntity
 import org.kts.tazmin.feature.courses.data.mapper.CourseMapper
 import org.kts.tazmin.feature.courses.data.model.CourseDto
 import org.kts.tazmin.feature.courses.data.model.CoursesPage
@@ -19,11 +20,10 @@ import org.kts.tazmin.feature.courses.data.model.ReviewSummaryDto
 import org.kts.tazmin.feature.courses.data.network.api.CoursesApi
 import org.kts.tazmin.feature.courses.domain.entity.Course
 import org.kts.tazmin.feature.courses.domain.repository.CoursesRepository
-import org.kts.tazmin.feature.courses.presentation.state.CoursesResult
 import kotlin.coroutines.cancellation.CancellationException
 
 class CoursesRepositoryImpl(
-    private val api: CoursesApi,
+    private val coursesApi: CoursesApi,
     private val courseDao: CourseDao,
     private val courseMapper: CourseMapper
 ) : CoursesRepository {
@@ -56,7 +56,7 @@ class CoursesRepositoryImpl(
         val response = findFirstNonEmptyPage(page, pageSize)
 
         val reviewMap = loadReviewMap(response.courses)
-        val courses = courseMapper.mapToDomainList(response.courses, reviewMap)
+        val courses = courseMapper.fromDtoList(response.courses, reviewMap)
 
         saveCoursesToCache(courses, page)
 
@@ -67,15 +67,21 @@ class CoursesRepositoryImpl(
         )
     }
 
-    override suspend fun fetchCourses(page: Int, pageSize: Int): CoursesResult {
+    override suspend fun fetchCourses(page: Int, pageSize: Int): Resource<CoursesPage> {
         return try {
             val response = findFirstNonEmptyPage(originalPage = page, pageSize = pageSize)
             val reviewMap = loadReviewMap(response.courses)
-            val courses = courseMapper.mapToDomainList(response.courses, reviewMap)
+            val courses = courseMapper.fromDtoList(response.courses, reviewMap)
             saveCoursesToCache(courses, page, null)
 
-            CoursesResult.Success(
-                data = CoursesPage(courses = courses, page = page, hasNext = response.meta.hasNext),
+            val coursesPage = CoursesPage(
+                courses = courses,
+                page = page,
+                hasNext = response.meta.hasNext
+            )
+
+            Resource.Success(
+                data = coursesPage,
                 source = Source.REMOTE
             )
         } catch (e: Throwable) {
@@ -85,22 +91,20 @@ class CoursesRepositoryImpl(
                 throw e
             }
 
-            if (isNetworkTimeoutOrIo(e)) {
-                val cached = loadCachedPage(page)
-                return if (cached != null) {
-                    CoursesResult.Error(
-                        cachedData = cached,
-                        message = "Ошибка сети. Показаны сохраненные результаты"
-                    )
-                } else {
-                    CoursesResult.Error(message = e.message ?: "Ошибка загрузки курсов")
-                }
+            val cached = if (isNetworkTimeoutOrIo(e)) {
+                loadCachedPage(page)
+            } else {
+                null
             }
-
-            return CoursesResult.Error(message = e.message ?: "Ошибка загрузки курсов")
+            Resource.Error(
+                message = when {
+                    isNetworkTimeoutOrIo(e) && cached != null -> "Ошибка сети. Показаны сохраненные результаты"
+                    else -> e.message ?: "Ошибка загрузки курсов"
+                },
+                data = cached
+            )
         }
     }
-
 
     // ищем первую непустую страницу, начиная с currentPage
     private suspend fun findFirstNonEmptyPage(
@@ -114,7 +118,7 @@ class CoursesRepositoryImpl(
             throw IllegalStateException("Слишком много пустых страниц подряд")
         }
 
-        val response = api.getCourses(currentPage, pageSize)
+        val response = coursesApi.getCourses(currentPage, pageSize)
 
         return if (response.courses.isEmpty() && response.meta.hasNext) {
             findFirstNonEmptyPage(
@@ -135,7 +139,7 @@ class CoursesRepositoryImpl(
         val maxPage = courseDao.getMaxCachedPage() ?: page
 
         return CoursesPage(
-            courses = cached.map { it.toDomain() },
+            courses = cached.map { courseMapper.fromEntity(it) },
             page = page,
             hasNext = page < maxPage
         )
@@ -151,55 +155,56 @@ class CoursesRepositoryImpl(
         } else {
             courseDao.clearSearch(query)
         }
-        val entities = courses.map { it.toEntity(page, query) }
+        val entities = courses.map { courseMapper.toEntity(it, page, query) }
         courseDao.insertCourses(entities)
     }
 
+    private suspend fun loadReviewMap(
+        courseDtos: List<CourseDto>
+    ): Map<Int, ReviewSummaryDto> = coroutineScope {
 
-    private suspend fun loadReviewMap(courseDtos: List<CourseDto>): Map<Int, ReviewSummaryDto> {
-        return courseDtos.mapNotNull { dto ->
+        courseDtos.mapNotNull { dto ->
             dto.reviewSummary?.let { id ->
-                runCatching { api.getReviewSummary(id) }.getOrNull()?.let { review ->
-                    dto.id to review
+                async {
+                    try {
+                        val review = coursesApi.getReviewSummary(id)
+                        dto.id to review
+                    } catch (e: Exception) {
+                        Napier.w("Отзывы не загружены для курса ${dto.id}: ${e.message}")
+                        null
+                    }
                 }
             }
-        }.toMap()
+        }.awaitAll().filterNotNull().toMap()
     }
 
-    override suspend fun searchCourses(query: String, page: Int): CoursesResult {
+    override suspend fun searchCourses(query: String, page: Int): Resource<CoursesPage> {
         return try {
             val pageData = loadSearchOnline(query, page)
-            CoursesResult.Success(
+            Resource.Success(
                 data = pageData,
                 source = Source.REMOTE
             )
         } catch (e: Throwable) {
             Napier.e("searchCourses error: ${e::class.simpleName}: ${e.message}", e)
 
-            if (e is CancellationException && !isNetworkTimeoutOrIo(e)) {
+            if (e is CancellationException) {
                 throw e
             }
 
-            // если это сетевой таймаут / IO / HTTP то возвращаем кэш (fallback)
-            if (isNetworkTimeoutOrIo(e)) {
-                val cached = loadCachedSearchPage(query, page)
-                return if (cached != null) {
-                    CoursesResult.Error(
-                        cachedData = cached,
-                        message = "Ошибка сети. Показаны сохранённые результаты"
-                    )
-                } else {
-                    CoursesResult.Error(
-                        message = e.message ?: "Ошибка поиска",
-                        cachedData = null
-                    )
-                }
+            val cached = if (isNetworkTimeoutOrIo(e)) {
+                loadCachedSearchPage(query, page)
+            } else {
+                null
             }
 
-            // прочие ошибки — общая обработка
-            return CoursesResult.Error(
-                message = e.message ?: "Ошибка поиска",
-                cachedData = null
+            // если это сетевой таймаут / IO / HTTP то возвращаем кэш (fallback)
+            Resource.Error(
+                message = when {
+                    isNetworkTimeoutOrIo(e) && cached != null -> "Ошибка сети. Показаны сохранённые результаты"
+                    else -> e.message ?: "Ошибка поиска"
+                },
+                data = cached
             )
         }
     }
@@ -208,7 +213,7 @@ class CoursesRepositoryImpl(
         val response = findFirstNonEmptySearchPage(query, page)
 
         val reviewMap = loadReviewMap(response.courses)
-        val courses = courseMapper.mapToDomainList(response.courses, reviewMap)
+        val courses = courseMapper.fromDtoList(response.courses, reviewMap)
 
         // сохраняем результаты поиска в кэш под ключом query
         saveCoursesToCache(courses, page, query)
@@ -227,7 +232,7 @@ class CoursesRepositoryImpl(
     ): CoursesResponse {
         if (attempt > 5) throw IllegalStateException("Слишком много пустых страниц подряд при поиске")
 
-        val response = api.searchCourses(query, currentPage)
+        val response = coursesApi.searchCourses(query, currentPage)
 
         return if (response.courses.isEmpty() && response.meta.hasNext) {
             findFirstNonEmptySearchPage(query, currentPage + 1, attempt + 1)
@@ -244,7 +249,7 @@ class CoursesRepositoryImpl(
         val hasNext = nextPageEntities.isNotEmpty()
 
         return CoursesPage(
-            courses = cachedEntities.map { it.toDomain() },
+            courses = cachedEntities.map { courseMapper.fromEntity(it) },
             page = page,
             hasNext = hasNext
         )
@@ -267,6 +272,4 @@ class CoursesRepositoryImpl(
 
         return false
     }
-
 }
-

@@ -64,6 +64,7 @@ import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 import org.kts.tazmin.feature.auth.presentation.viewmodel.OAuthViewModel
 import org.kts.tazmin.theme.CatTheme
 import kotlin.math.absoluteValue
@@ -71,7 +72,7 @@ import kotlin.math.absoluteValue
 @OptIn(ExperimentalFoundationApi::class, ExperimentalAnimationApi::class)
 @Composable
 fun OnboardingScreen(
-    oAuthViewModel: OAuthViewModel = koinInject(),
+    oAuthViewModel: OAuthViewModel = koinViewModel<OAuthViewModel>(),
     onNavigateToMain: () -> Unit
 ) {
     val oAuthState by oAuthViewModel.state.collectAsStateWithLifecycle()

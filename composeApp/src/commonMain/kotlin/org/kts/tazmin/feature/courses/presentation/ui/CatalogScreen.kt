@@ -7,10 +7,13 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,23 +23,22 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -47,39 +49,73 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import kotlinx.coroutines.flow.distinctUntilChanged
 import ktskotlinproject.composeapp.generated.resources.Res
 import ktskotlinproject.composeapp.generated.resources.all_courses
+import ktskotlinproject.composeapp.generated.resources.course_placeholder
 import ktskotlinproject.composeapp.generated.resources.free
 import ktskotlinproject.composeapp.generated.resources.search_courses
 import ktskotlinproject.composeapp.generated.resources.students
+import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
+import org.kts.tazmin.feature.courses.domain.entity.CatalogSection
 import org.kts.tazmin.feature.courses.domain.entity.Course
-import org.kts.tazmin.feature.courses.presentation.state.CoursesUiEvent
-import org.kts.tazmin.feature.courses.presentation.viewmodel.CoursesViewModel
+import org.kts.tazmin.feature.courses.presentation.state.CatalogUiState
+import org.kts.tazmin.feature.courses.presentation.state.SearchUiState
+import org.kts.tazmin.feature.courses.presentation.viewmodel.CatalogViewModel
+import org.kts.tazmin.feature.courses.presentation.viewmodel.SearchCoursesViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CatalogScreen(
-    viewModel: CoursesViewModel = koinInject(),
+    catalogViewModel: CatalogViewModel = koinViewModel(),
+    searchCoursesViewModel: SearchCoursesViewModel = koinViewModel(),
     onCourseClick: (Int) -> Unit = {}
 ) {
-    val state by viewModel.state.collectAsStateWithLifecycle()
-    val searchState by viewModel.searchState.collectAsStateWithLifecycle()
+    val catalogState by catalogViewModel.state.collectAsStateWithLifecycle()
+    val searchState by searchCoursesViewModel.state.collectAsStateWithLifecycle()
 
+    CatalogScreenContent(
+        catalogState = catalogState,
+        searchState = searchState,
+        onQueryChange = searchCoursesViewModel::onQueryChanged,
+        onCourseClick = onCourseClick,
+        onRefreshCatalog = catalogViewModel::refresh,
+        onLoadMoreSearch = searchCoursesViewModel::loadMore
+    )
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@Composable
+fun CatalogScreenContent(
+    catalogState: CatalogUiState,
+    searchState: SearchUiState,
+    onQueryChange: (String) -> Unit,
+    onCourseClick: (Int) -> Unit,
+    onRefreshCatalog: () -> Unit,
+    onLoadMoreSearch: () -> Unit
+) {
     val listState = rememberLazyListState()
+    val isSearchActive = searchState.query.length >= 2
 
-    LaunchedEffect(viewModel) {
-        if (state.courses.isEmpty() && !state.isLoading) {
-            viewModel.handleEvent(CoursesUiEvent.LoadCourses)
-        }
+    val isInitialLoading = when {
+        isSearchActive -> searchState.results.isEmpty() && searchState.isSearching
+        else -> catalogState.catalog.isEmpty() && catalogState.isLoading
+    }
+
+    val currentError = when {
+        isSearchActive -> searchState.error
+        else -> catalogState.catalogError
     }
 
     Scaffold(
@@ -89,104 +125,108 @@ fun CatalogScreen(
             )
         }
     ) { padding ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
+
+            //search bar
             OutlinedTextField(
-                value = state.searchQuery,
-                onValueChange = {
-                    viewModel.handleEvent(CoursesUiEvent.SearchQueryChanged(it))
-                },
+                value = searchState.query,
+                onValueChange = onQueryChange,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
                 placeholder = { Text(stringResource(Res.string.search_courses)) },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Default.Search, null) },
                 singleLine = true,
-                isError = searchState.error != null && state.searchQuery.isNotBlank()
+                isError = searchState.error != null && searchState.query.isNotBlank()
             )
 
-            if (searchState.error != null && state.searchQuery.isNotBlank()) {
+            //search error under field
+            if (searchState.error != null &&
+                searchState.query.isNotBlank() &&
+                searchState.results.isEmpty()
+            ) {
                 Text(
-                    text = searchState.error!!,
+                    text = searchState.error,
                     color = MaterialTheme.colorScheme.error,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
 
-            val isSearchActive = state.searchQuery.length >= 2
-            val isLoading = if (isSearchActive) searchState.isSearching else state.isLoading
-            val items = if (isSearchActive) searchState.results else state.courses
-            val error = if (isSearchActive) searchState.error else state.coursesError
-
             when {
-                // начальная загрузка
-                isLoading && items.isEmpty() -> {
+                //initial loading
+                isInitialLoading -> {
                     CatalogLoadingView()
                 }
 
-                // ошибка и нет данных (не из кэша)
-                error != null && items.isEmpty() && !state.isFromCache && !searchState.isFromCache -> {
+                //catalog error
+                currentError != null && !isSearchActive && catalogState.catalog.isEmpty() -> {
                     ErrorView(
-                        error = error,
-                        onReload = {
-                            if (isSearchActive) {
-                                // повторный поиск
-                                viewModel.handleEvent(CoursesUiEvent.SearchQueryChanged(state.searchQuery))
-                            } else {
-                                viewModel.handleEvent(CoursesUiEvent.LoadCourses)
-                            }
-                        }
+                        error = currentError,
+                        onReload = onRefreshCatalog
                     )
                 }
 
                 else -> {
-                    Column(modifier = Modifier.fillMaxSize()) {
+                    //main content with pull-to-refresh
+                    PullToRefreshBox(
+                        isRefreshing = catalogState.isRefreshing && !isSearchActive,
+                        onRefresh = { if (!isSearchActive) onRefreshCatalog() },
+                        modifier = Modifier.fillMaxSize()
+                    ) {
 
-                        /*if (!isSearchActive && state.showCachedBanner && state.cachedInfoMessage != null) {
-                            CachedInfoBanner(message = state.cachedInfoMessage!!)
-                        }
-
-                        if (!isSearchActive && error != null && state.isFromCache) {
-                            ErrorBanner(message = error, onDismiss = { viewModel.clearError() })
-                        }
-
-                        if (isSearchActive && searchState.showCachedBanner && searchState.cachedInfoMessage != null) {
-                            CachedInfoBanner(message = searchState.cachedInfoMessage!!)
-                        }
-
-                        if (isSearchActive && error != null && searchState.isFromCache) {
-                            ErrorBanner(message = error, onDismiss = { viewModel.clearSearchError() })
-                        }*/
-                        PullToRefreshBox(
-                            isRefreshing = state.isRefreshing && !isSearchActive,
-                            onRefresh = {
-                                if (!isSearchActive) {
-                                    viewModel.handleEvent(CoursesUiEvent.RefreshCourses)
-                                }
-                            },
+                        LazyColumn(
+                            state = listState,
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            LazyColumn(
-                                state = listState,
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                itemsIndexed(
-                                    items = items,
-                                    key = { index, course -> "${course.id}_$index" }
-                                ) { _, course ->
+
+                            //catalog mode
+                            if (!isSearchActive) {
+                                catalogState.catalog.forEach { section ->
+
+                                    if (section !is CatalogSection.Banner) {
+                                        stickyHeader("header_${section.id}") {
+                                            Surface(tonalElevation = 2.dp) {
+                                                Text(
+                                                    text = section.title,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .background(MaterialTheme.colorScheme.background)
+                                                        .padding(16.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    item("content_${section.id}") {
+                                        CatalogSectionView(
+                                            section = section,
+                                            onCourseClick = onCourseClick
+                                        )
+                                    }
+                                }
+                            }
+
+                            if (isSearchActive) {
+
+                                items(
+                                    items = searchState.results,
+                                    key = { it.id }
+                                ) { course ->
                                     CourseCatalogItem(
                                         course = course,
                                         onClick = { onCourseClick(course.id) }
                                     )
                                 }
 
-                                // индикатор пагинации обычного списка
-                                if (!isSearchActive && state.isLoadingMore) {
-                                    item(key = "loading_more") {
+                                if (searchState.isLoadingMore) {
+                                    item("pagination_loader") {
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -197,150 +237,233 @@ fun CatalogScreen(
                                         }
                                     }
                                 }
-
-                                // индикатор пагинации поиска
-                                if (isSearchActive && searchState.isLoadingMore) {
-                                    item(key = "search_loading_more") {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(24.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            CircularProgressIndicator()
-                                        }
-                                    }
-                                }
-
-                                // индикатор начального поиска (если уже есть результаты)
-                                if (isSearchActive && searchState.isSearching && items.isNotEmpty()) {
-                                    item(key = "search_loading") {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(8.dp),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                                        }
-                                    }
-                                }
                             }
-                        }
-
-                        LaunchedEffect(listState, isSearchActive, state.hasNext, searchState.hasNext) {
-                            snapshotFlow {
-                                // индекс последнего видимого элемента
-                                listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
-                            }
-                                .distinctUntilChanged()
-                                .collect { lastVisibleIndex ->
-                                    val lastIndex = items.lastIndex
-                                    if (lastVisibleIndex != null && lastIndex >= 0) {
-                                        val shouldLoadMore = lastVisibleIndex >= lastIndex - 2
-                                        if (shouldLoadMore) {
-                                            if (!isSearchActive) {
-                                                if (state.hasNext && !state.isLoadingMore && !state.isLoading && !state.isRefreshing) {
-                                                    viewModel.handleEvent(CoursesUiEvent.LoadMoreCourses)
-                                                }
-                                            } else {
-                                                if (searchState.hasNext && !searchState.isLoadingMore && !searchState.isSearching) {
-                                                    viewModel.handleEvent(CoursesUiEvent.LoadMoreSearchResults)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
                         }
                     }
                 }
             }
         }
     }
-}
 
-@Composable
-fun CachedInfoBanner(
-    message: String,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
-        ),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = Icons.Default.Info,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(18.dp)
-            )
+    //pagination trigger
+    LaunchedEffect(isSearchActive, searchState.results.size) {
+        if (!isSearchActive) return@LaunchedEffect
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        snapshotFlow {
+            listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index
         }
+            .distinctUntilChanged()
+            .collect { lastVisibleIndex ->
+
+                val lastIndex = searchState.results.lastIndex
+
+                val shouldLoadMore =
+                    lastVisibleIndex != null &&
+                            lastVisibleIndex >= lastIndex - 2 &&
+                            searchState.hasNext &&
+                            !searchState.isLoadingMore &&
+                            !searchState.isSearching
+
+                if (shouldLoadMore) onLoadMoreSearch()
+            }
     }
 }
 
 
 @Composable
-fun ErrorBanner(
-    message: String,
-    onDismiss: () -> Unit,
+fun CatalogSectionView(
+    section: CatalogSection,
+    onCourseClick: (Int) -> Unit
+) {
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp)
+    ) {
+        when (section) {
+            is CatalogSection.CourseList -> {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(
+                        items = section.courses,
+                        key = { it.id }
+                    ) { course ->
+                        CourseCard(
+                            course = course,
+                            onClick = { onCourseClick(course.id) },
+                            modifier = Modifier.width(270.dp)
+                        )
+                    }
+                }
+            }
+
+            is CatalogSection.Banner -> {
+                BannerCard(
+                    title = section.title,
+                    cover = section.cover,
+                    url = section.url,
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp)
+                        .fillMaxWidth()
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun CourseCard(
+    course: Course,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        onClick = onClick,
+        modifier = modifier
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.onSurface
+        ),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 4.dp
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            AsyncImage(
+                model = course.coverUrl,
+                contentDescription = course.title,
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(Res.drawable.course_placeholder),
+                error = painterResource(Res.drawable.course_placeholder),
+                fallback = painterResource(Res.drawable.course_placeholder)
+            )
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text = course.title,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.People,
+                            contentDescription = stringResource(Res.string.students),
+                            modifier = Modifier.size(14.dp),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = formatStudentCount(course.studentsCount),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    Text(
+                        text = if (course.isPaid && !course.price.isNullOrBlank())
+                            course.price
+                        else
+                            stringResource(Res.string.free),
+                        style = MaterialTheme.typography.labelMedium.copy(
+                            fontWeight = FontWeight.SemiBold
+                        ),
+                        color = if (course.isPaid)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    text = course.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun formatStudentCount(count: Int): String {
+    return when {
+        count >= 1_000_000 -> "${count / 1_000_000}M"
+        count >= 10_000 -> "${count / 1000}K"
+        count >= 1_000 -> {
+            val thousands = count / 1000
+            val remainder = (count % 1000) / 100
+            if (remainder > 0) "${thousands}.${remainder}K"
+            else "${thousands}K"
+        }
+
+        else -> count.toString()
+    }
+}
+
+@Composable
+fun BannerCard(
+    title: String,
+    cover: String?,
+    url: String,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer
-        ),
-        shape = RoundedCornerShape(8.dp)
+            .clickable {
+                // TODO: open url
+            },
+        shape = RoundedCornerShape(12.dp),
     ) {
-        Row(
-            modifier = Modifier.padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
         ) {
-            Icon(
-                imageVector = Icons.Default.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error,
-                modifier = Modifier.size(18.dp)
+            AsyncImage(
+                model = cover,
+                contentDescription = title,
+                contentScale = ContentScale.FillWidth,
+                modifier = Modifier.fillMaxSize()
             )
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Text(
-                text = message,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.weight(1f)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)),
+                            startY = 0f,
+                            endY = Float.POSITIVE_INFINITY
+                        )
+                    )
             )
-
-            IconButton(
-                onClick = onDismiss,
-                modifier = Modifier.size(24.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Dismiss",
-                    tint = MaterialTheme.colorScheme.onErrorContainer
-                )
-            }
         }
     }
 }
@@ -496,7 +619,10 @@ fun CourseCatalogItem(
                 modifier = Modifier
                     .size(70.dp)
                     .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(Res.drawable.course_placeholder),
+                error = painterResource(Res.drawable.course_placeholder),
+                fallback = painterResource(Res.drawable.course_placeholder)
             )
 
             Spacer(Modifier.width(12.dp))
@@ -512,7 +638,7 @@ fun CourseCatalogItem(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(4.dp))
 
                 Text(
                     text = course.description,
@@ -522,15 +648,7 @@ fun CourseCatalogItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
-                Spacer(Modifier.height(4.dp))
-
-                Text(
-                    text = course.author,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
 
                 Row(
                     verticalAlignment = Alignment.CenterVertically
@@ -561,4 +679,89 @@ fun CourseCatalogItem(
             }
         }
     }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun CatalogScreenPreview() {
+
+    val fakeCourses = listOf(
+        Course(
+            id = 1,
+            title = "Kotlin Basics",
+            coverUrl = null,
+            studentsCount = 12000,
+            description = "Learn Kotlin from scratch",
+            author = "JetBrains",
+            rating = 4.7,
+            isPaid = false,
+            price = "1000$",
+            progress = 80f,
+            score = 50,
+            cost = 100
+        ),
+        Course(
+            id = 2,
+            title = "Jetpack Compose",
+            coverUrl = null,
+            studentsCount = 8500,
+            description = "Modern UI toolkit",
+            author = "Google",
+            rating = 4.8,
+            isPaid = true,
+            price = "1000$",
+            progress = 30f,
+            score = 50,
+            cost = 100
+        ),
+        Course(
+            id = 3,
+            title = "Algorithms 101",
+            coverUrl = null,
+            studentsCount = 5000,
+            description = "Basic algorithms",
+            author = "CS Academy",
+            rating = 4.5,
+            isPaid = false,
+            price = "1000$",
+            progress = 12f,
+            score = 50,
+            cost = 100
+        )
+    )
+
+    val fakeCatalog = listOf(
+        CatalogSection.CourseList(
+            title = "Popular Courses",
+            courses = fakeCourses,
+            id = 1
+        ),
+        CatalogSection.Banner(
+            title = "Big Sale!",
+            cover = null,
+            url = "https://stepik.org",
+            id = 2
+        )
+    )
+
+    val fakeCatalogState = CatalogUiState(
+        catalog = fakeCatalog,
+        isLoading = false,
+        isRefreshing = false
+    )
+
+    val fakeSearchState = SearchUiState(
+        query = "",
+        results = emptyList(),
+        isSearching = false
+    )
+
+    CatalogScreenContent(
+        catalogState = fakeCatalogState,
+        searchState = fakeSearchState,
+        onQueryChange = {},
+        onCourseClick = {},
+        onRefreshCatalog = {},
+        onLoadMoreSearch = {}
+    )
 }

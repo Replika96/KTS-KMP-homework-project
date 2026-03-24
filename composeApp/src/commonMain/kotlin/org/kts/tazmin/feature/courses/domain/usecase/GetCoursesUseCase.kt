@@ -20,7 +20,7 @@ class GetCoursesUseCase(
     suspend fun forceRefresh(
         page: Int,
         pageSize: Int = 20
-    ): CoursesResult {
+    ): Resource<CoursesPage> {
         return repository.fetchCourses(page, pageSize)
     }
 }
