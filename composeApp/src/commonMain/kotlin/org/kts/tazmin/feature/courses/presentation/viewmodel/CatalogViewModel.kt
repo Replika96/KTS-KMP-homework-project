@@ -24,53 +24,35 @@ class CatalogViewModel(
 
     init {
         observeCatalog()
-        refresh()
+        initialLoad()
     }
 
     private fun observeCatalog() {
         getCatalogUseCase()
-            .onEach { handleResource(it) }
-            .launchIn(viewModelScope)
-    }
-
-    private fun handleResource(resource: Resource<List<CatalogSection>>) {
-        when (resource) {
-
-            is Resource.Loading -> {
-                _state.update {
-                    it.copy(
-                        isLoading = it.catalog.isEmpty(),
-                        isRefreshing = it.catalog.isNotEmpty()
-                    )
-                }
-            }
-
-            is Resource.Success -> {
+            .onEach { catalog ->
                 _state.update { current ->
-
-                    // если данные одинаковы, то не триггерим лишний recomposition
-                    if (current.catalog == resource.data &&
-                        current.isFromCache == (resource.source == Source.CACHE)
-                    ) return
-
                     current.copy(
-                        catalog = resource.data,
+                        catalog = catalog,
                         isLoading = false,
                         isRefreshing = false,
-                        isFromCache = resource.source == Source.CACHE,
                         catalogError = null
                     )
                 }
             }
+            .launchIn(viewModelScope)
+    }
 
-            is Resource.Error -> {
+    private fun initialLoad() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+
+            try {
+                getCatalogUseCase.refreshFromNetwork()
+            } catch (e: Throwable) {
                 _state.update {
                     it.copy(
-                        catalog = resource.data ?: emptyList(),
                         isLoading = false,
-                        isRefreshing = false,
-                        catalogError = resource.message,
-                        isFromCache = resource.data != null,
+                        catalogError = e.message
                     )
                 }
             }
@@ -82,7 +64,17 @@ class CatalogViewModel(
 
         viewModelScope.launch {
             _state.update { it.copy(isRefreshing = true) }
-            getCatalogUseCase.refreshCatalog()
+
+            try {
+                getCatalogUseCase.refreshFromNetwork()
+            } catch (e: Throwable) {
+                _state.update {
+                    it.copy(
+                        isRefreshing = false,
+                        catalogError = e.message
+                    )
+                }
+            }
         }
     }
 }

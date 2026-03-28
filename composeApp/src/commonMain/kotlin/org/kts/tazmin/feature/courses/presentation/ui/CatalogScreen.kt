@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
@@ -35,6 +36,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -108,10 +110,8 @@ fun CatalogScreenContent(
     val listState = rememberLazyListState()
     val isSearchActive = searchState.query.length >= 2
 
-    val isInitialLoading = when {
-        isSearchActive -> searchState.results.isEmpty() && searchState.isSearching
-        else -> catalogState.catalog.isEmpty() && catalogState.isLoading
-    }
+    val isInitialLoading =
+        !isSearchActive && catalogState.isLoading && catalogState.catalog.isEmpty()
 
     val currentError = when {
         isSearchActive -> searchState.error
@@ -190,17 +190,17 @@ fun CatalogScreenContent(
                                 catalogState.catalog.forEach { section ->
 
                                     if (section !is CatalogSection.Banner) {
-                                        stickyHeader("header_${section.id}") {
-                                            Surface(tonalElevation = 2.dp) {
-                                                Text(
-                                                    text = section.title,
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .background(MaterialTheme.colorScheme.background)
-                                                        .padding(16.dp)
-                                                )
-                                            }
+                                        item("header_${section.id}") {
+                                            SectionHeader(
+                                                title = section.title,
+                                                coursesCount = when (section) {
+                                                    is CatalogSection.CourseList -> section.courses.size
+                                                    else -> null
+                                                },
+                                                onClick = {
+                                                    // открыть список всей секции
+                                                }
+                                            )
                                         }
                                     }
 
@@ -268,8 +268,45 @@ fun CatalogScreenContent(
             }
     }
 }
+@Composable
+fun SectionHeader(
+    title: String,
+    coursesCount: Int?,
+    onClick: (() -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
 
+        Column(modifier = Modifier.weight(1f)) {
 
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium
+            )
+
+            if (coursesCount != null) {
+                Text(
+                    text = "$coursesCount coures", // форматирование
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        if (onClick != null) {
+            IconButton(onClick = onClick) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null
+                )
+            }
+        }
+    }
+}
 @Composable
 fun CatalogSectionView(
     section: CatalogSection,

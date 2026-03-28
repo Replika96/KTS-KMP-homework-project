@@ -33,7 +33,9 @@ class CoursesRepositoryImpl(
 
         // cначала грузим кэш
         val cached = loadCachedPage(page)
-        if (cached != null) {
+        if (cached == null) {
+            emit(Resource.Loading)
+        } else {
             emit(Resource.Success(cached, Source.CACHE))
         }
 

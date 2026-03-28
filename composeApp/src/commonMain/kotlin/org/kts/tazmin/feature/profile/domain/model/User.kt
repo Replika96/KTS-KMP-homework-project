@@ -1,7 +1,6 @@
 package org.kts.tazmin.feature.profile.domain.model
 
 import kotlin.text.first
-import kotlin.text.last
 
 data class  User(
     val id: Int,

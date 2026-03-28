@@ -29,30 +29,24 @@ class CatalogRepositoryImpl(
     private val catalogMapper: CatalogMapper
 ) : CatalogRepository {
 
-    override fun loadCatalog(): Flow<Resource<List<CatalogSection>>> {
+    override fun loadCatalog(): Flow<List<CatalogSection>> {
         return catalogDao.observeSectionsWithItems()
-            .map<List<SectionWithItems>, Resource<List<CatalogSection>>> { sectionsWithItems ->
+            .map { sectionsWithItems ->
 
-                // собираем ВСЕ courseId одним списком
                 val allIds = sectionsWithItems
                     .flatMap { it.items }
                     .map { it.itemId }
                     .distinct()
 
-                // загружаем курсы одним запросом
                 val coursesMap = if (allIds.isNotEmpty()) {
                     courseDao.getCoursesByIds(allIds)
                         .associateBy { it.id }
                 } else emptyMap()
 
-                // мапим в domain
-                val domain = sectionsWithItems.map { relation ->
+                sectionsWithItems.map { relation ->
                     mapToDomain(relation, coursesMap)
                 }
-
-                Resource.Success(domain, Source.CACHE)
             }
-            .distinctUntilChanged()
     }
 
     // network

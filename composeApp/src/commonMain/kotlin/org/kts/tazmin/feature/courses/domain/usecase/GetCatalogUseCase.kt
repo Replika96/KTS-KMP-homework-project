@@ -9,11 +9,11 @@ import org.kts.tazmin.feature.courses.domain.repository.CatalogRepository
 class GetCatalogUseCase(
     private val catalogRepository: CatalogRepository
 ) {
-    operator fun invoke(): Flow<Resource<List<CatalogSection>>>{
+    operator fun invoke(): Flow<List<CatalogSection>>{
         return catalogRepository.loadCatalog()
     }
 
-    suspend fun refreshCatalog() {
+    suspend fun refreshFromNetwork() {
         Napier.d("Manual refresh triggered")
         catalogRepository.refreshFromNetwork()
     }

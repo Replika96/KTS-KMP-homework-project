@@ -5,7 +5,7 @@ import org.kts.tazmin.core.common.Resource
 import org.kts.tazmin.feature.courses.domain.entity.CatalogSection
 
 interface CatalogRepository {
-    fun loadCatalog(): Flow<Resource<List<CatalogSection>>>
+    fun loadCatalog(): Flow<List<CatalogSection>>
 
     suspend fun refreshFromNetwork()
 }
