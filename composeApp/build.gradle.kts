@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.ksp)
 }
 
 kotlin {
@@ -31,6 +32,7 @@ kotlin {
             implementation(libs.compose.uiToolingPreview)
             implementation(libs.androidx.activity.compose)
             implementation(libs.ktor.client.android)
+
         }
         commonMain.dependencies {
             implementation(libs.compose.runtime)
@@ -44,6 +46,7 @@ kotlin {
             implementation(libs.napier)
             implementation(libs.androidx.navigation.compose)
             implementation(libs.kotlinx.datetime)
+            implementation(libs.okio)
             // coil
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor)
@@ -68,6 +71,16 @@ kotlin {
             implementation(libs.ktor.client.logging)
             //oauth
             implementation(libs.appauth.kotlin)
+            //datastore
+            implementation(libs.androidx.datastore.preferences)
+            implementation(libs.androidx.datastore.preferences.core)
+            implementation(libs.security.crypto.datastore.preferences)
+            implementation(libs.androidx.security.crypto)
+            //room
+            implementation(libs.androidx.room.runtime)
+            implementation(libs.androidx.room.ktx)
+            // kvault
+            implementation(libs.kvault)
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -113,5 +126,9 @@ android {
 }
 
 dependencies {
+    add("kspAndroid", "androidx.room:room-compiler:2.8.4")
+    add("kspIosArm64", "androidx.room:room-compiler:2.8.4")
+    add("kspIosSimulatorArm64", "androidx.room:room-compiler:2.8.4")
+
     debugImplementation(libs.compose.uiTooling)
 }

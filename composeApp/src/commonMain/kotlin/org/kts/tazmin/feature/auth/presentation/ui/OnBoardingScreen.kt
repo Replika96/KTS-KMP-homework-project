@@ -1,5 +1,6 @@
 package org.kts.tazmin.feature.auth.presentation.ui
 
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -8,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,33 +21,66 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Login
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import ktskotlinproject.composeapp.generated.resources.Res
+import ktskotlinproject.composeapp.generated.resources.close
+import ktskotlinproject.composeapp.generated.resources.login_with_stepik
+import ktskotlinproject.composeapp.generated.resources.next
+import ktskotlinproject.composeapp.generated.resources.onboarding_desc_courses
+import ktskotlinproject.composeapp.generated.resources.onboarding_desc_pace
+import ktskotlinproject.composeapp.generated.resources.onboarding_desc_start
+import ktskotlinproject.composeapp.generated.resources.onboarding_desc_welcome
+import ktskotlinproject.composeapp.generated.resources.onboarding_title_courses
+import ktskotlinproject.composeapp.generated.resources.onboarding_title_pace
+import ktskotlinproject.composeapp.generated.resources.onboarding_title_start
+import ktskotlinproject.composeapp.generated.resources.onboarding_title_welcome
 import ktskotlinproject.composeapp.generated.resources.stepik_logotype_blac
 import org.jetbrains.compose.resources.DrawableResource
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
+import org.koin.compose.koinInject
+import org.kts.tazmin.feature.auth.presentation.viewmodel.OAuthViewModel
 import org.kts.tazmin.theme.CatTheme
 import kotlin.math.absoluteValue
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalAnimationApi::class)
 @Composable
 fun OnboardingScreen(
-    onLoginClick: () -> Unit
+    oAuthViewModel: OAuthViewModel = koinInject(),
+    onNavigateToMain: () -> Unit
 ) {
+    val oAuthState by oAuthViewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(oAuthState.isAuthenticated) {
+        if (oAuthState.isAuthenticated) {
+            onNavigateToMain()
+        }
+    }
 
     val pagerState = rememberPagerState(pageCount = { onboardingPages.size })
     val scope = rememberCoroutineScope()
@@ -101,7 +136,7 @@ fun OnboardingScreen(
                 Spacer(Modifier.height(24.dp))
 
                 Text(
-                    text = item.title,
+                    text = stringResource(item.title),
                     style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center
                 )
@@ -109,7 +144,7 @@ fun OnboardingScreen(
                 Spacer(Modifier.height(12.dp))
 
                 Text(
-                    text = item.description,
+                    text = stringResource(item.description),
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center
                 )
@@ -126,26 +161,74 @@ fun OnboardingScreen(
 
         Spacer(Modifier.height(24.dp))
 
+        val isLastPage = pagerState.currentPage == onboardingPages.lastIndex
+
         Button(
             onClick = {
-                if (pagerState.currentPage < onboardingPages.lastIndex) {
+                if (!isLastPage) {
                     scope.launch {
                         pagerState.animateScrollToPage(pagerState.currentPage + 1)
                     }
                 } else {
-                    onLoginClick()
+                    oAuthViewModel.onLoginWithStepik()
                 }
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+            contentPadding = PaddingValues()
         ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.tertiary
+                            )
+                        ),
+                        shape = RoundedCornerShape(14.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    if (isLastPage) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Login,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                    }
+                    Text(
+                        text = if (isLastPage) stringResource(Res.string.login_with_stepik) else stringResource(
+                            Res.string.next
+                        ),
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                }
+            }
+        }
+    }
+    if (oAuthState.showWebView) {
+        LoginWebView(
+            onCodeReceived = oAuthViewModel::onCodeReceived,
+            onError = oAuthViewModel::onError,
+            modifier = Modifier.fillMaxSize()
+        )
 
-            val text =
-                if (pagerState.currentPage == onboardingPages.lastIndex)
-                    "Войти"
-                else
-                    "Далее"
-
-            Text(text)
+        IconButton(
+            onClick = { oAuthViewModel.resetWebView() },
+            modifier = Modifier
+                .padding(16.dp)
+        ) {
+            Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.close))
         }
     }
 }
@@ -191,35 +274,37 @@ fun PagerIndicator(
 @Composable
 fun OnboardingScreenPreview() {
     CatTheme {
-        OnboardingScreen { }
+        OnboardingScreen(
+            onNavigateToMain = { }
+        )
     }
 }
 
 data class OnboardingPage(
-    val title: String,
-    val description: String,
+    val title: StringResource,
+    val description: StringResource,
     val imageRes: DrawableResource
 )
 
-val onboardingPages = listOf(
+private val onboardingPages = listOf(
     OnboardingPage(
-        title = "Добро пожаловать",
-        description = "Изучайте новые навыки и проходите курсы от лучших преподавателей.",
+        title = Res.string.onboarding_title_welcome,
+        description = Res.string.onboarding_desc_welcome,
         imageRes = Res.drawable.stepik_logotype_blac
     ),
     OnboardingPage(
-        title = "Тысячи курсов",
-        description = "Используйте поиск и находите курсы по интересам.",
+        title = Res.string.onboarding_title_courses,
+        description = Res.string.onboarding_desc_courses,
         imageRes = Res.drawable.stepik_logotype_blac
     ),
     OnboardingPage(
-        title = "Учитесь в своём темпе",
-        description = "Сохраняйте курсы и возвращайтесь к ним в любое время.",
+        title = Res.string.onboarding_title_pace,
+        description = Res.string.onboarding_desc_pace,
         imageRes = Res.drawable.stepik_logotype_blac
     ),
     OnboardingPage(
-        title = "Начнём",
-        description = "Войдите через Stepik чтобы получить доступ к своим курсам.",
+        title = Res.string.onboarding_title_start,
+        description = Res.string.onboarding_desc_start,
         imageRes = Res.drawable.stepik_logotype_blac
     )
 )

@@ -1,10 +1,10 @@
 package org.kts.tazmin.feature.auth.domain.usecase
 
-import org.kts.tazmin.feature.auth.domain.repository.LoginRepository
+import org.kts.tazmin.feature.auth.domain.repository.AuthRepository
 
-class LoginUseCase(private val loginRepository: LoginRepository) {
-    suspend operator fun invoke(username: String, password: String): Result<Unit> {
+class LoginUseCase(private val authRepository: AuthRepository) {
+    suspend operator fun invoke(code: String): Result<Unit> {
         // пока простой usecase
-        return loginRepository.login(username, password)
+        return authRepository.login(code = code)
     }
 }

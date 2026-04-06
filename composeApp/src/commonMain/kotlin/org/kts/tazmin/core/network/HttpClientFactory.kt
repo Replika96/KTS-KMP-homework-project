@@ -20,8 +20,9 @@ import org.kts.tazmin.feature.auth.domain.repository.AuthRepository
 
 expect fun httpClientEngine(): HttpClientEngine
 
-object HttpClientFactory {
-
+class HttpClientFactory(
+    private val tokenStorage: TokenStorage
+) {
     // общая конфигурация
     private fun HttpClientConfig<*>.baseConfig() {
 
@@ -31,6 +32,7 @@ object HttpClientFactory {
                     prettyPrint = true
                     isLenient = true
                     ignoreUnknownKeys = true
+                    explicitNulls = false
                 }
             )
         }
@@ -71,13 +73,14 @@ object HttpClientFactory {
 
                     // загружаем токены
                     loadTokens {
-                        val accessToken = TokenStorage.getAccessToken()
-                        val refreshToken = TokenStorage.getRefreshToken()
+                        val accessToken = tokenStorage.getAccessToken()
+                        val refreshToken = tokenStorage.getRefreshToken()
 
                         if (accessToken != null && refreshToken != null) {
                             Napier.d("Loaded tokens")
                             BearerTokens(accessToken, refreshToken)
                         } else {
+                            Napier.w("No tokens")
                             null
                         }
                     }
@@ -91,7 +94,7 @@ object HttpClientFactory {
                         result.fold(
                             onSuccess = { tokenResponse ->
 
-                                TokenStorage.saveTokens(
+                                tokenStorage.saveTokens(
                                     accessToken = tokenResponse.accessToken,
                                     refreshToken = tokenResponse.refreshToken,
                                     expiresIn = tokenResponse.expiresIn
@@ -108,7 +111,6 @@ object HttpClientFactory {
                             }
                         )
                     }
-
 
                     sendWithoutRequest { request ->
                         request.url.host.contains("stepik.org")

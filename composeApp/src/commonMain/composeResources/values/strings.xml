@@ -3,6 +3,12 @@
     <string name="app_title">Stepik</string>
     <string name="welcome_title">Добро пожаловать!</string>
 
+    <string name="close">Закрыть</string>
+    <string name="search_hint">Поиск курсов...</string>
+    <string name="clear">Очистить</string>
+    <string name="load_more">Загрузить еще</string>
+    <string name="no_results">Ничего не найдено по запросу </string>
+    <string name="cached_data_message">Показаны сохраненные данные</string>
     <string name="login_button">Войти</string>
     <string name="login_title">Вход</string>
     <string name="login_label">Логин</string>
@@ -26,9 +32,71 @@
 
     <string name="auth_error">Ошибка авторизации</string>
     <string name="load_error">Ошибка загрузки</string>
+    <string name="unknown_error">Неизвестная ошибка</string>
     <string name="loading">Загрузка...</string>
     <string name="retry">Повторить</string>
 
     <string name="login_with_stepik">Войти через Stepik</string>
     <string name="free">Бесплатно</string>
+
+    <string name="no_found">Ничего не найдено по запросу</string>
+    <string name="no_courses_available">Нет доступных курсов</string>
+
+    <string name="statistics_title">Статистика</string>
+    <string name="knowledge_label">Знания</string>
+    <string name="information">Информация</string>
+    <string name="reputation_label">Репутация</string>
+    <string name="followers_label">Подписчики</string>
+    <string name="solved_steps_label">Решено шагов</string>
+    <string name="rank_template">#%1$d</string>
+    <string name="joined_prefix">Присоединился</string>
+    <string name="years_ago">%d лет назад</string>
+    <string name="year_ago">%d год назад</string>
+    <string name="years_ago_plural">%d года назад</string>
+    <string name="months_ago">%d месяцев назад</string>
+    <string name="month_ago">%d месяц назад</string>
+    <string name="days_ago">%d дней назад</string>
+    <string name="today">Сегодня</string>
+    <string name="yesterday">Вчера</string>
+
+    <string name="about">Обо мне</string>
+    <string name="profile_visibility">Видимость</string>
+    <string name="private_profile">Приватный профиль</string>
+    <string name="public_profile">Публичный профиль</string>
+
+    <string name="onboarding_title_welcome">Добро пожаловать</string>
+    <string name="onboarding_desc_welcome">Изучайте новые навыки и проходите курсы от лучших преподавателей.</string>
+
+    <string name="onboarding_title_courses">Тысячи курсов</string>
+    <string name="onboarding_desc_courses">Используйте поиск и находите курсы по интересам.</string>
+
+    <string name="onboarding_title_pace">Учитесь в своём темпе</string>
+    <string name="onboarding_desc_pace">Сохраняйте курсы и возвращайтесь к ним в любое время.</string>
+
+    <string name="onboarding_title_start">Начнём</string>
+    <string name="onboarding_desc_start">Войдите через Stepik чтобы получить доступ к своим курсам.</string>
+
+    <string name="next">Далее</string>
+
+    <!-- ошибки -->
+    <string name="error_server">Ошибка сервера. Попробуйте позже</string>
+    <string name="error_server_temporary">Сервер временно недоступен. Попробуйте позже</string>
+    <string name="error_no_internet">Нет подключения к интернету</string>
+    <string name="error_timeout">Превышено время ожидания. Проверьте соединение</string>
+    <string name="error_parsing">Ошибка обработки данных</string>
+    <string name="error_unknown">Произошла неизвестная ошибка</string>
+
+    <!-- HTTP статусы -->
+    <string name="error_bad_request">Неверный запрос</string>
+    <string name="error_unauthorized">Требуется авторизация</string>
+    <string name="error_forbidden">Доступ запрещен</string>
+    <string name="error_not_found">Ресурс не найден</string>
+    <string name="error_validation">Ошибка валидации данных</string>
+    <string name="error_client">Ошибка клиента (статус %d)</string>
+    <string name="error_rate_limit">Слишком много запросов. Повторите через %s секунд</string>
+
+    <!-- специфичные для курсов -->
+    <string name="error_course_not_found">Курс не найден</string>
+    <string name="error_courses_load">Не удалось загрузить курсы</string>
+    <string name="error_search">Ошибка при поиске</string>
 </resources>
