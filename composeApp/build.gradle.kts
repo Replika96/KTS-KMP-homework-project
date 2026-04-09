@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+    id("io.gitlab.arturbosch.detekt")
 }
 
 kotlin {

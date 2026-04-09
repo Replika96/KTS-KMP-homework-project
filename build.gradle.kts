@@ -7,4 +7,5 @@ plugins {
     alias(libs.plugins.composeCompiler) apply false
     alias(libs.plugins.kotlinMultiplatform) apply false
     alias(libs.plugins.ksp) apply false
+    id("io.gitlab.arturbosch.detekt") version "1.23.8" apply false
 }

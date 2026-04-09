@@ -45,7 +45,9 @@ data class CourseDto(
     @SerialName("is_paid")
     val isPaid: Boolean? = null,
 
-    val language: String? = null
+    val language: String? = null,
+
+    val progress: String? = null,
 )
 
 @Serializable

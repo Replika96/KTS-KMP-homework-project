@@ -9,5 +9,8 @@ data class Course(
     val rating: Double,
     val studentsCount: Int,
     val isPaid: Boolean,
-    val price: String?
+    val price: String?,
+    val progress: Float? = null,
+    val score: Int? = null,
+    val cost: Int? = null
 )

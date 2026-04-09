@@ -1,50 +1,36 @@
 package org.kts.tazmin.feature.courses.data.mapper
 
-import org.kts.tazmin.feature.courses.data.local.CourseEntity
+import org.kts.tazmin.feature.courses.data.local.MyCourseEntity
 import org.kts.tazmin.feature.courses.data.model.CourseDto
-import org.kts.tazmin.feature.courses.data.model.ReviewSummaryDto
+import org.kts.tazmin.feature.courses.data.model.Progress
 import org.kts.tazmin.feature.courses.domain.entity.Course
-import org.kts.tazmin.feature.courses.data.local.CourseSource
+import kotlin.time.Clock
 
-object CourseMapper {
+object MyCourseMapper {
 
-    // DTO -> Domain
-    fun fromDto(dto: CourseDto, reviewSummary: ReviewSummaryDto? = null): Course {
+    //DTO + Progress -> Domain
+    fun toDomain(dto: CourseDto, progress: Progress?): Course {
         return Course(
             id = dto.id,
             title = dto.title,
             description = dto.summary ?: "Нет описания",
             author = "Stepik",
             coverUrl = dto.cover,
-            rating = reviewSummary?.average ?: 0.0,
+            rating = 0.0,
             studentsCount = dto.learnersCount ?: 0,
             isPaid = dto.isPaid ?: false,
             price = dto.displayPrice,
-            progress = null,
-            score = null,
-            cost = null
+            progress = progress?.let {
+                if (it.cost == 0) 0f else it.score.toFloat() / it.cost.toFloat()
+            },
+            score = progress?.score?.toInt(),
+            cost = progress?.cost
         )
     }
 
-    // DTO list -> Domain list
-    fun fromDtoList(
-        dtos: List<CourseDto>,
-        reviewSummaries: Map<Int, ReviewSummaryDto>
-    ): List<Course> {
-        return dtos.map { dto ->
-            val summary = reviewSummaries[dto.id]
-            fromDto(dto, summary)
-        }
-    }
 
-    // Domain -> Entity
-    fun toEntity(
-        course: Course,
-        page: Int? = null,
-        query: String? = null,
-        source: CourseSource? = null
-    ): CourseEntity {
-        return CourseEntity(
+    fun toEntity(course: Course): MyCourseEntity {
+        return MyCourseEntity(
             id = course.id,
             title = course.title,
             description = course.description,
@@ -54,27 +40,28 @@ object CourseMapper {
             studentsCount = course.studentsCount,
             isPaid = course.isPaid,
             price = course.price,
+
             progress = course.progress,
             score = course.score,
             cost = course.cost,
-            cachePage = page,
-            cacheQuery = query,
-            source = source
+
+            cacheTimestamp = Clock.System.now().toEpochMilliseconds()
         )
     }
 
-    // Entity -> Domain
-    fun fromEntity(entity: CourseEntity): Course {
+
+    fun toDomain(entity: MyCourseEntity): Course {
         return Course(
             id = entity.id,
             title = entity.title,
             description = entity.description,
             author = entity.author,
             coverUrl = entity.coverUrl,
-            rating = entity.rating ?: 0.0,
+            rating = entity.rating,
             studentsCount = entity.studentsCount,
             isPaid = entity.isPaid,
             price = entity.price,
+
             progress = entity.progress,
             score = entity.score,
             cost = entity.cost

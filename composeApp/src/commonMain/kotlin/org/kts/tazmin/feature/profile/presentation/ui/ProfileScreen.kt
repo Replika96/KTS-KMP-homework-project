@@ -88,7 +88,7 @@ import org.kts.tazmin.theme.CatTheme
 fun ProfileScreen(
     //onSettingsClick: () -> Unit = {},
     //onEditProfileClick: () -> Unit = {},
-    viewModel: ProfileViewModel = koinViewModel(),
+    viewModel: ProfileViewModel = koinViewModel<ProfileViewModel>(),
     onNavigateToLogin: () -> Unit
 ) {
 
