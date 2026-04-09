@@ -32,15 +32,16 @@ val authModule = module {
     single<AuthApi> {
         AuthApi(get(named("publicClient")))
     }
-    factory { UserPreferences(get()) }
+    factory { UserPreferences(dataStore = get()) }
 
     // Repository
     factory<AuthRepository> { AuthRepositoryImpl(get(), get()) }
     factory<ProfileRepository> {
         ProfileRepositoryImpl(
-            userApi = get(),
-            userDao = get(),
-            userMapper = get()
+            profileApi = get(),
+            profileDao = get(),
+            profileMapper = get(),
+            profileDbMapper = get()
         )
     }
 

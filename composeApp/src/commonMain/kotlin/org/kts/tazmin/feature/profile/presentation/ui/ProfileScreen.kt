@@ -75,9 +75,10 @@ import ktskotlinproject.composeapp.generated.resources.solved_steps_label
 import ktskotlinproject.composeapp.generated.resources.statistics_title
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.viewmodel.koinViewModel
-import org.kts.tazmin.feature.courses.presentation.ui.ErrorView
+import org.kts.tazmin.core.common.toUiMessage
+import org.kts.tazmin.feature.catalog.presentation.ui.ErrorView
 import org.kts.tazmin.feature.profile.domain.model.Name
-import org.kts.tazmin.feature.profile.domain.model.User
+import org.kts.tazmin.feature.profile.domain.model.Profile
 import org.kts.tazmin.feature.profile.domain.model.UserStats
 import org.kts.tazmin.feature.profile.presentation.state.ProfileUiState
 import org.kts.tazmin.feature.profile.presentation.viewmodel.ProfileViewModel
@@ -98,7 +99,6 @@ fun ProfileScreen(
     }
 
     val state by viewModel.state.collectAsStateWithLifecycle()
-
     LaunchedEffect(state) {
         if (state is ProfileUiState.LogoutSuccess) {
             onNavigateToLogin()
@@ -112,19 +112,16 @@ fun ProfileScreen(
 
         is ProfileUiState.Success -> {
             ProfileContent(
-                user = currentState.user,
+                profile = currentState.user,
                 isRefreshing = currentState.isRefreshing,
-                error = currentState.error,
-                isFromCache = currentState.isFromCache,
                 onRefresh = { viewModel.refreshProfile() },
-                onLogout = { viewModel.logout() },
-                onErrorDismiss = { viewModel.clearError() }
+                onLogout = { viewModel.logout() }
             )
         }
 
         is ProfileUiState.Error -> {
             ErrorView(
-                error = currentState.message,
+                error = currentState.message.toUiMessage(),
                 onReload = { viewModel.loadProfile() },
             )
         }
@@ -141,13 +138,10 @@ fun ProfileScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileContent(
-    user: User,
+    profile: Profile,
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
-    onLogout: () -> Unit,
-    error: String?,
-    isFromCache: Boolean,
-    onErrorDismiss: () -> Unit
+    onLogout: () -> Unit
 ) {
     PullToRefreshBox(
         isRefreshing = isRefreshing,
@@ -163,28 +157,27 @@ fun ProfileContent(
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-
             item {
                 ProfileHeaderSection(
-                    user,
+                    profile,
                     onLogout = onLogout
                 )
             }
 
-            user.bio?.takeIf { it.isNotBlank() }?.let {
+            profile.bio?.takeIf { it.isNotBlank() }?.let {
                 item {
                     ProfileBioCard(it)
                 }
             }
 
             item {
-                ProfileStatsCard(user.stats)
+                ProfileStatsCard(profile.stats)
             }
 
             item {
                 ProfileMetaCard(
-                    joinedAt = user.joinedAt,
-                    isPrivate = user.isPrivate
+                    joinedAt = profile.joinedAtFormatted,
+                    isPrivate = profile.isPrivate
                 )
             }
 
@@ -477,7 +470,7 @@ private fun StatItem(
 
 @Composable
 fun ProfileHeaderSection(
-    user: User,
+    profile: Profile,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -520,20 +513,20 @@ fun ProfileHeaderSection(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             ProfileAvatar(
-                avatarUrl = user.avatarUrl,
-                initials = user.name.initials
+                avatarUrl = profile.avatarUrl,
+                initials = profile.name.initials
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = user.name.full,
+                text = profile.name.full,
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onPrimary,
                 fontWeight = FontWeight.SemiBold
             )
 
-            if (user.isPrivate) {
+            if (profile.isPrivate) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
                     text = "Private account",
@@ -567,7 +560,7 @@ fun ProfileAvatar(
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
-        // почему-то не подгружаются аватарка с api
+        // c сервака приходит svg и я не знаю, как отображать его в kmp пока что
 //        if (avatarUrl != null) {
 //            AsyncImage(
 //                model = avatarUrl,
@@ -577,13 +570,6 @@ fun ProfileAvatar(
 //                    .clip(CircleShape),
 //                contentScale = ContentScale.Crop
 //            )
-//        } else {
-//            Text(
-//                text = initials,
-//                style = MaterialTheme.typography.headlineMedium,
-//                fontWeight = FontWeight.Bold,
-//                color = MaterialTheme.colorScheme.primary
-//            )
 //        }
     }
 }
@@ -592,7 +578,7 @@ fun ProfileAvatar(
 @Preview
 fun ProfileScreenPreview() {
     CatTheme {
-        val testUser = User(
+        val testUser = Profile(
             id = 1,
             name = Name(
                 first = "Иван",
@@ -613,13 +599,10 @@ fun ProfileScreenPreview() {
         )
 
         ProfileContent(
-            user = testUser,
+            profile = testUser,
             isRefreshing = false,
             onRefresh = {},
-            onLogout = { },
-            error = null,
-            isFromCache = false,
-            onErrorDismiss = { },
+            onLogout = { }
         )
     }
 }
@@ -757,7 +740,11 @@ fun ProfileLoadingView() {
                                     .fillMaxWidth(if (it == 2) 0.7f else 1f)
                                     .height(16.dp)
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha * 0.3f))
+                                    .background(
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                            alpha = alpha * 0.3f
+                                        )
+                                    )
                             )
                         }
                     }
@@ -797,7 +784,7 @@ fun ProfileLoadingView() {
                         repeat(4) { index ->
                             StatItemSkeleton(
                                 alpha = alpha,
-                                iconColor = when(index) {
+                                iconColor = when (index) {
                                     0 -> MaterialTheme.colorScheme.primary
                                     1 -> MaterialTheme.colorScheme.tertiary
                                     2 -> MaterialTheme.colorScheme.secondary
@@ -810,7 +797,11 @@ fun ProfileLoadingView() {
                                     modifier = Modifier
                                         .height(40.dp)
                                         .width(1.dp)
-                                        .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f))
+                                        .background(
+                                            MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                                alpha = 0.1f
+                                            )
+                                        )
                                 )
                             }
                         }
@@ -862,7 +853,11 @@ fun ProfileLoadingView() {
                                     .width(80.dp)
                                     .height(14.dp)
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha * 0.3f))
+                                    .background(
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                            alpha = alpha * 0.3f
+                                        )
+                                    )
                             )
 
                             Spacer(modifier = Modifier.height(4.dp))
@@ -898,7 +893,11 @@ fun ProfileLoadingView() {
                                     .width(100.dp)
                                     .height(14.dp)
                                     .clip(RoundedCornerShape(4.dp))
-                                    .background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = alpha * 0.3f))
+                                    .background(
+                                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                            alpha = alpha * 0.3f
+                                        )
+                                    )
                             )
 
                             Spacer(modifier = Modifier.height(4.dp))

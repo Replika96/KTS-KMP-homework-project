@@ -1,42 +1,62 @@
 package org.kts.tazmin.core.utils
 
-import kotlinx.datetime.Instant
 
-object DateFormatter {
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.periodUntil
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Clock
+import kotlin.time.Instant
 
-    fun formatJoinedDate(
-        isoDateString: String,
-        yearAgo: (Int) -> String,
-        monthAgo: (Int) -> String,
-        dayAgo: (Int) -> String,
-        yesterday: String,
-        justNow: String
-    ): String {
-        return try {
-            val instant = Instant.parse(isoDateString)
-            val now = kotlin.time.Clock.System.now()
-            val duration = now - instant
+fun formatRelativeTime(
+    instant: Instant,
+    now: Instant = Clock.System.now(),
+    timeZone: TimeZone = TimeZone.currentSystemDefault()
+): String {
+    val diff = now - instant
 
-            when {
-                duration.inWholeDays >= 365 -> {
-                    val years = (duration.inWholeDays / 365).toInt()
-                    yearAgo(years)
-                }
+    val seconds = diff.inWholeSeconds
+    val minutes = diff.inWholeMinutes
+    val hours = diff.inWholeHours
+    val daysByDuration = diff.inWholeDays
 
-                duration.inWholeDays >= 30 -> {
-                    val months = (duration.inWholeDays / 30).toInt()
-                    monthAgo(months)
-                }
+    val localNow = now.toLocalDateTime(timeZone)
+    val localInstant = instant.toLocalDateTime(timeZone)
+    val period = localInstant.date.periodUntil(localNow.date)
 
-                duration.inWholeDays > 0 -> {
-                    val days = duration.inWholeDays.toInt()
-                    dayAgo(days)
-                }
+    return when {
+        seconds < 60 -> "только что"
 
-                else -> justNow
-            }
-        } catch (e: Exception) {
-            isoDateString
-        }
+        minutes < 60 ->
+            plural(minutes, "минута", "минуты", "минут") + " назад"
+
+        hours < 24 ->
+            plural(hours, "час", "часа", "часов") + " назад"
+
+        daysByDuration == 1L -> "вчера"
+        daysByDuration == 2L -> "позавчера"
+
+        daysByDuration < 7 ->
+            plural(daysByDuration, "день", "дня", "дней") + " назад"
+
+        daysByDuration < 30 ->
+            plural(daysByDuration / 7, "неделю", "недели", "недель") + " назад"
+
+        period.years == 0 && period.months > 0 ->
+            plural(period.months.toLong(), "месяц", "месяца", "месяцев") + " назад"
+
+        period.years > 0 ->
+            plural(period.years.toLong(), "год", "года", "лет") + " назад"
+
+        else -> "давно"
+    }
+}
+
+private fun plural(value: Long, one: String, few: String, many: String): String {
+    val v = value % 100
+    return when {
+        v in 11..19 -> "$value $many"
+        v % 10 == 1L -> "$value $one"
+        v % 10 in 2..4 -> "$value $few"
+        else -> "$value $many"
     }
 }

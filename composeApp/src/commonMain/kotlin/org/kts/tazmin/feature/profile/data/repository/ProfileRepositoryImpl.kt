@@ -3,32 +3,33 @@ package org.kts.tazmin.feature.profile.data.repository
 import io.github.aakira.napier.Napier
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import org.kts.tazmin.core.common.AppError
 import org.kts.tazmin.core.common.Resource
 import org.kts.tazmin.core.common.Source
-import org.kts.tazmin.feature.profile.data.local.UserDao
-import org.kts.tazmin.feature.profile.data.mapper.UserDbMapper.toDomain
-import org.kts.tazmin.feature.profile.data.mapper.UserDbMapper.toEntity
-import org.kts.tazmin.feature.profile.data.mapper.UserMapper
-import org.kts.tazmin.feature.profile.data.remote.UserApi
-import org.kts.tazmin.feature.profile.domain.model.User
+import org.kts.tazmin.core.common.runCatchingCancellable
+import org.kts.tazmin.feature.profile.data.local.ProfileDao
+import org.kts.tazmin.feature.profile.data.mapper.ProfileDbMapper
+import org.kts.tazmin.feature.profile.data.mapper.ProfileMapper
+import org.kts.tazmin.feature.profile.data.network.ProfileApi
+import org.kts.tazmin.feature.profile.domain.model.Profile
 import org.kts.tazmin.feature.profile.domain.repository.ProfileRepository
-import kotlin.coroutines.cancellation.CancellationException
 
 class ProfileRepositoryImpl(
-    private val userApi: UserApi,
-    private val userDao: UserDao,
-    private val userMapper: UserMapper
+    private val profileApi: ProfileApi,
+    private val profileDao: ProfileDao,
+    private val profileDbMapper: ProfileDbMapper,
+    private val profileMapper: ProfileMapper
 ) : ProfileRepository {
 
-    override fun getCurrentUser(): Flow<Resource<User>> = flow {
+    override fun getCurrentUser(): Flow<Resource<Profile>> = flow {
 
         // сначала пробуем кэш
-        val cachedUser = userDao.getUser()
+        val cachedUser = profileDao.getProfile()
 
         if (cachedUser != null) {
             emit(
                 Resource.Success(
-                    data = cachedUser.toDomain(),
+                    data = profileDbMapper.toDomain(cachedUser),
                     source = Source.CACHE
                 )
             )
@@ -37,41 +38,29 @@ class ProfileRepositoryImpl(
         }
 
         // пробуем сеть
-        try {
-            val response = userApi.getUser()
-            val userDto = response.users.firstOrNull()
-                ?: throw IllegalStateException("Список пользователей пуст")
+        runCatchingCancellable {
+            Napier.d("Fetching user from API...", tag = "ProfileRepository")
+            val response = profileApi.getProfile()
+            val userDto = response.profilesDto.firstOrNull()
+                ?: throw Exception("Список пользователей пуст") //todo
 
-            val user = userMapper.mapToDomain(userDto)
+            val user = profileMapper.mapToDomain(userDto)
 
             // сохраняем в БД
-            userDao.insert(user.toEntity())
-
+            profileDao.insert(profileDbMapper.toEntity(user))
+            Napier.i("User updated from network", tag = "ProfileRepository")
             emit(
                 Resource.Success(
                     data = user,
                     source = Source.REMOTE
                 )
             )
-
-        } catch (e: Exception) {
-
-            if (e is CancellationException) throw e
-
-            Napier.e("getCurrentUser error", e)
-
-            // если есть кэш просто ошибка поверх него
+        }.onFailure { e ->
             if (cachedUser != null) {
                 emit(
                     Resource.Error(
-                        message = "Не удалось обновить данные",
-                        data = cachedUser.toDomain()
-                    )
-                )
-            } else {
-                emit(
-                    Resource.Error(
-                        message = e.message ?: "Ошибка загрузки"
+                        message = e as AppError,
+                        data = profileDbMapper.toDomain(cachedUser)
                     )
                 )
             }

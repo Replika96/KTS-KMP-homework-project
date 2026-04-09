@@ -3,8 +3,10 @@ package org.kts.tazmin.feature.profile.di
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.qualifier.named
 import org.koin.dsl.module
-import org.kts.tazmin.feature.profile.data.mapper.UserMapper
-import org.kts.tazmin.feature.profile.data.remote.UserApi
+import org.kts.tazmin.feature.profile.data.mapper.ProfileDbMapper
+import org.kts.tazmin.feature.profile.data.mapper.ProfileMapper
+import org.kts.tazmin.feature.profile.data.mapper.UserDbMapper
+import org.kts.tazmin.feature.profile.data.network.ProfileApi
 import org.kts.tazmin.feature.profile.data.repository.ProfileRepositoryImpl
 import org.kts.tazmin.feature.profile.domain.repository.ProfileRepository
 import org.kts.tazmin.feature.profile.domain.usecase.GetUserUseCase
@@ -13,17 +15,21 @@ import org.kts.tazmin.feature.profile.presentation.viewmodel.ProfileViewModel
 
 val profileModule = module {
 
-    single { UserApi(get(named("authClient"))) }
+    single { ProfileApi(get(named("authClient"))) }
 
     factory<ProfileRepository> {
         ProfileRepositoryImpl(
-            userApi = get(),
-            userDao = get(),
-            userMapper = get()
+            profileApi = get(),
+            profileDao = get(),
+            profileDbMapper = get(),
+            profileMapper = get()
         )
     }
 
-    single<UserMapper> { UserMapper }
+    factory<UserDbMapper> { UserDbMapper() }
+
+    factory<ProfileMapper> { ProfileMapper() }
+    factory<ProfileDbMapper> { ProfileDbMapper() }
 
     viewModel {
         ProfileViewModel(

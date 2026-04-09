@@ -20,7 +20,8 @@
     <string name="password_requirement">Пароль должен быть минимум 6 символов</string>
 
     <string name="main_screen">Главная</string>
-    <string name="continue_coures">Продолжить учиться</string>
+    <string name="continue_coures">Продолжить обучение</string>
+    <string name="enroll">Записаться</string>
     <string name="no_active_courses">Нет активных курсов</string>
     <string name="my_active_courses">Мои курсы</string>
     <string name="all_courses">Все курсы</string>
@@ -35,7 +36,9 @@
     <string name="unknown_error">Неизвестная ошибка</string>
     <string name="loading">Загрузка...</string>
     <string name="retry">Повторить</string>
-
+    <string name="back">Назад</string>
+    <string name="share">Поделиться</string>
+    <string name="favorite">Избранное</string>
     <string name="login_with_stepik">Войти через Stepik</string>
     <string name="free">Бесплатно</string>
 
@@ -78,6 +81,18 @@
 
     <string name="next">Далее</string>
 
+    <!-- мои курсы -->
+    <string name="my_courses">Мои курсы</string>
+    <string name="total">Всего</string>
+    <string name="in_progress">В процессе</string>
+    <string name="completed">Завершено</string>
+    <string name="not_started">Не начато</string>
+    <string name="no_courses_yet">У вас пока нет курсов</string>
+    <string name="no_courses_in_progress">Нет курсов в процессе</string>
+    <string name="no_completed_courses">Нет завершенных курсов</string>
+    <string name="no_courses_not_started">Нет не начатых курсов</string>
+    <string name="view_course">Просмотр</string>
+
     <!-- ошибки -->
     <string name="error_server">Ошибка сервера. Попробуйте позже</string>
     <string name="error_server_temporary">Сервер временно недоступен. Попробуйте позже</string>
@@ -85,6 +100,7 @@
     <string name="error_timeout">Превышено время ожидания. Проверьте соединение</string>
     <string name="error_parsing">Ошибка обработки данных</string>
     <string name="error_unknown">Произошла неизвестная ошибка</string>
+    <string name="error_http">Ошибка сети: код %d</string>
 
     <!-- HTTP статусы -->
     <string name="error_bad_request">Неверный запрос</string>
@@ -99,4 +115,51 @@
     <string name="error_course_not_found">Курс не найден</string>
     <string name="error_courses_load">Не удалось загрузить курсы</string>
     <string name="error_search">Ошибка при поиске</string>
+
+    <!-- вкладки -->
+    <string name="tab_info">Инфо</string>
+    <string name="tab_modules">Модули</string>
+    <string name="tab_reviews">Отзывы</string>
+
+    <!-- курс: информация -->
+    <string name="course_about">О курсе</string>
+    <string name="course_requirements">Требования</string>
+    <string name="course_target_audience">Для кого курс</string>
+    <string name="course_duration">Длительность</string>
+    <string name="course_language">Язык</string>
+    <string name="course_certificate">Сертификат</string>
+    <string name="course_certificate_available">Сертификат доступен</string>
+    <string name="course_students_count">Учеников на курсе</string>
+    <string name="course_instructors">Преподаватели</string>
+
+    <!-- модули -->
+    <string name="modules_unavailable_title">Модули пока недоступны</string>
+    <string name="modules_unavailable_desc">Структура курса ещё не добавлена или загружается</string>
+    <string name="retry_button">Попробовать снова</string>
+
+    <!-- компоненты урока -->
+    <string name="expand">Развернуть</string>
+    <string name="collapse">Свернуть</string>
+    <string name="go_to_lesson">Перейти к уроку</string>
+
+    <!-- CTA блок -->
+    <string name="discount_until">Скидка до %s</string>
+    <string name="reviews_count">%d отзывов</string>
+    <string name="your_progress">Ваш прогресс</string>
+    <string name="percent_template">%d%%</string>
+
+    <!-- кнопки CTA -->
+    <string name="buy_course">Купить курс</string>
+    <string name="enroll_course">Записаться на курс</string>
+    <string name="continue_learning">Продолжить обучение</string>
+
+    <!-- скелетоны/загрузка -->
+    <string name="loading_modules">Загрузка модулей...</string>
+    <string name="loading_info">Загрузка информации...</string>
+
+    <string name="courses_one">%d курс</string>
+    <string name="courses_few">%d курса</string>
+    <string name="courses_many">%d курсов</string>
+
+
 </resources>

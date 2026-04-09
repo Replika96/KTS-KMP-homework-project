@@ -2,7 +2,7 @@ package org.kts.tazmin.feature.profile.domain.model
 
 import kotlin.text.first
 
-data class  User(
+data class User(
     val id: Int,
     val name: Name,
     val avatarUrl: String?,
