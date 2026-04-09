@@ -2,16 +2,19 @@ package org.kts.tazmin.feature.profile.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import kotlinx.io.IOException
 import org.kts.tazmin.core.common.Resource
 import org.kts.tazmin.core.common.Source
+import org.kts.tazmin.core.common.runCatchingCancellable
+import org.kts.tazmin.core.utils.formatRelativeTime
 import org.kts.tazmin.feature.profile.domain.usecase.GetUserUseCase
 import org.kts.tazmin.feature.profile.domain.usecase.LogoutUseCase
 import org.kts.tazmin.feature.profile.presentation.state.ProfileUiState
+import kotlin.time.Instant
 
 class ProfileViewModel(
     private val getUserUseCase: GetUserUseCase,
@@ -21,19 +24,26 @@ class ProfileViewModel(
     private val _state = MutableStateFlow<ProfileUiState>(ProfileUiState.Loading)
     val state: StateFlow<ProfileUiState> = _state.asStateFlow()
 
+    private var loadJob: Job? = null
+
     fun loadProfile() {
-        viewModelScope.launch {
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
             getUserUseCase().collect { resource ->
-
                 _state.value = when (resource) {
-
-                    is Resource.Loading -> {
-                        ProfileUiState.Loading
-                    }
+                    is Resource.Loading -> ProfileUiState.Loading
 
                     is Resource.Success -> {
+                        val user = resource.data
+
+                        val formattedJoinedAt = runCatchingCancellable {
+                            formatRelativeTime(Instant.parse(user.joinedAt))
+                        }.getOrElse { "—" }
+
                         ProfileUiState.Success(
-                            user = resource.data,
+                            user = user.copy(
+                                joinedAtFormatted = formattedJoinedAt
+                            ),
                             isFromCache = resource.source == Source.CACHE,
                             isRefreshing = resource.source == Source.CACHE,
                             error = null
@@ -42,7 +52,6 @@ class ProfileViewModel(
 
                     is Resource.Error -> {
                         if (resource.data != null) {
-                            // есть кэш, то показываем его и ошибку
                             ProfileUiState.Success(
                                 user = resource.data,
                                 isFromCache = true,
@@ -50,7 +59,6 @@ class ProfileViewModel(
                                 error = resource.message
                             )
                         } else {
-                            // вообще ничего нет
                             ProfileUiState.Error(resource.message)
                         }
                     }
@@ -65,16 +73,8 @@ class ProfileViewModel(
 
     fun logout() {
         viewModelScope.launch {
-            logoutUseCase().fold(
-                onSuccess = {
-                    _state.value = ProfileUiState.LogoutSuccess
-                },
-                onFailure = { error ->
-                    _state.value = ProfileUiState.Error(
-                        message = "Ошибка выхода: ${error.message}"
-                    )
-                }
-            )
+            logoutUseCase()
+            _state.value = ProfileUiState.LogoutSuccess
         }
     }
 

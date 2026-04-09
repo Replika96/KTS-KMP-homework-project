@@ -5,42 +5,43 @@ import org.kts.tazmin.feature.profile.domain.model.Name
 import org.kts.tazmin.feature.profile.domain.model.User
 import org.kts.tazmin.feature.profile.domain.model.UserStats
 
-object UserDbMapper {
+class UserDbMapper {
 
-    fun User.toEntity(): UserEntity {
+    fun toEntity(user: User): UserEntity {
+
         return UserEntity(
-            id = id,
-            firstName = name.first,
-            lastName = name.last,
-            avatarUrl = avatarUrl,
-            bio = bio,
-            knowledge = stats.knowledge,
-            knowledgeRank = stats.knowledgeRank,
-            reputation = stats.reputation,
-            reputationRank = stats.reputationRank,
-            followers = stats.followers,
-            solvedSteps = stats.solvedSteps,
-            joinedAt = joinedAt,
-            isPrivate = isPrivate
+            id = user.id,
+            firstName = user.name.first,
+            lastName = user.name.last,
+            avatarUrl = user.avatarUrl,
+            bio = user.bio,
+            knowledge = user.stats.knowledge,
+            knowledgeRank = user.stats.knowledgeRank,
+            reputation = user.stats.reputation,
+            reputationRank = user.stats.reputationRank,
+            followers = user.stats.followers,
+            solvedSteps = user.stats.solvedSteps,
+            joinedAt = user.joinedAt,
+            isPrivate = user.isPrivate
         )
     }
 
-    fun UserEntity.toDomain(): User {
+    fun toDomain(entity: UserEntity): User {
         return User(
-            id = id,
-            name = Name(firstName, lastName),
-            avatarUrl = avatarUrl,
-            bio = bio,
+            id = entity.id,
+            name = Name(entity.firstName, entity.lastName),
+            avatarUrl = entity.avatarUrl,
+            bio = entity.bio,
             stats = UserStats(
-                knowledge = knowledge,
-                knowledgeRank = knowledgeRank,
-                reputation = reputation,
-                reputationRank = reputationRank,
-                followers = followers,
-                solvedSteps = solvedSteps
+                knowledge = entity.knowledge,
+                knowledgeRank = entity.knowledgeRank,
+                reputation = entity.reputation,
+                reputationRank = entity.reputationRank,
+                followers = entity.followers,
+                solvedSteps = entity.solvedSteps
             ),
-            joinedAt = joinedAt,
-            isPrivate = isPrivate
+            joinedAt = entity.joinedAt,
+            isPrivate = entity.isPrivate
         )
     }
 }

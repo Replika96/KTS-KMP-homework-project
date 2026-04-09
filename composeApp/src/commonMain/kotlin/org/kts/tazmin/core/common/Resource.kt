@@ -7,7 +7,7 @@ sealed class Resource<out T> {
     ) : Resource<T>()
 
     data class Error<T>(
-        val message: String,
+        val message: AppError,
         val data: T? = null
     ) : Resource<T>()
 

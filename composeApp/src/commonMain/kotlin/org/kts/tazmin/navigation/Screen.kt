@@ -20,5 +20,8 @@ sealed interface Screen {
     data object Profile : Screen
 
     @Serializable
+    data object AllCourses : Screen
+
+    @Serializable
     data class CoursesDetail(val courseId: Int) : Screen
 }

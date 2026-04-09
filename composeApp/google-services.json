@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "961508111907",
+    "project_id": "stepik-tazmin",
+    "storage_bucket": "stepik-tazmin.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:961508111907:android:83d59a83efd99629b7a396",
+        "android_client_info": {
+          "package_name": "org.kts.tazmin"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCdrOp_OlZI3cNusT7MFbH9NoWjzATTXYA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

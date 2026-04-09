@@ -38,7 +38,7 @@ class HttpClientFactory(
         }
 
         install(Logging) {
-            level = LogLevel.ALL
+            level = LogLevel.HEADERS
             logger = object : Logger {
                 override fun log(message: String) {
                     Napier.d(tag = "HTTP", message = message)
