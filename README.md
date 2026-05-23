@@ -90,6 +90,12 @@ composeApp/src/
 ```
 
 ---
+# Screenshots
+<img width="1471" height="880" alt="изображение" src="https://github.com/user-attachments/assets/4bc87931-307b-48b6-a0dc-f90bb2e3e7ed" />
+
+<img width="1448" height="889" alt="изображение" src="https://github.com/user-attachments/assets/72b6f928-4e01-4cae-a163-fc5ddd5b9401" />
+
+<img width="1482" height="895" alt="изображение" src="https://github.com/user-attachments/assets/bfe31110-f794-4b0e-90f2-08b8997cb9e3" />
 
 ## Фичи
 
@@ -217,10 +223,13 @@ ViewModel шарится между шагами в рамках одного `L
 
 ---
 
-## Защита
+## APK
 
-APK: https://drive.google.com/file/d/1rFKTUbW1Uc4XTMVBNGd7FLi_95GV_JN7/view?usp=sharing
-Презентация: https://docs.google.com/presentation/d/1Y8irVgMWa8CqvJBz_SYRVA4T-nPXdykj/edit?usp=sharing&ouid=106862959450532499215&rtpof=true&sd=true
+https://drive.google.com/file/d/1rFKTUbW1Uc4XTMVBNGd7FLi_95GV_JN7/view?usp=sharing
+
+## Презентация
+
+https://docs.google.com/presentation/d/1Y8irVgMWa8CqvJBz_SYRVA4T-nPXdykj/edit?usp=sharing&ouid=106862959450532499215&rtpof=true&sd=true
 
 ## Сертификат прохождения курса
 
